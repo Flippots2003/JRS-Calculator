@@ -199,7 +199,7 @@ input[type=checkbox] { appearance: auto; width: 18px; height: 18px; min-height: 
 }
 @media (max-width: 780px) {
   :root { --nav-height: 66px; }
-  .app-header { height: 76px; padding: 0 18px; }
+  .app-header { height: calc(76px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left)); }
   .brand-mark { width: 40px; height: 40px; border-radius: 11px; font-size: 15px; }
   .brand { gap: 10px; }
   .brand strong { font-size: 14px; }

@@ -24,7 +24,7 @@ async function save(page: Page) {
 }
 test.beforeEach(async ({ page }) => {
   page.on('dialog', dialog => dialog.accept())
-  await page.goto('/')
+  await page.goto('./')
   await expect(page.getByRole('heading', { name: 'Nieuwe offerte', exact: true })).toBeVisible()
 })
 test('geen fictieve bedrijfsprijzen; onvolledige offertes worden geblokkeerd', async ({ page }) => {
@@ -103,7 +103,7 @@ test('JSON-back-up herstelt gegevens; foutieve bestanden laten opslag intact', a
   const download = await downloadPromise; const path = (await download.path())!
   const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, baseURL } = testInfo.project.use
   const fresh = await browser.newContext({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, baseURL })
-  const p = await fresh.newPage(); p.on('dialog', d => d.accept()); await p.goto('/')
+  const p = await fresh.newPage(); p.on('dialog', d => d.accept()); await p.goto('./')
   await navigate(p, 'Instellingen'); await p.getByRole('tab', { name: 'Back-up & app' }).click()
   await p.locator('input[type=file]').setInputFiles(path)
   await expect(p.getByRole('status')).toContainText('Back-up volledig hersteld.')
@@ -135,8 +135,11 @@ test('klant zonder offerte, alle dienstcategorieën, dupliceren en vorige versie
   await page.getByLabel('Offertestatus filter').selectOption('Goedgekeurd'); await expect(page.locator('.quote-card')).toHaveCount(1)
 })
 test('mobiele layout blijft binnen het scherm; manifest en app-iconen aanwezig', async ({ page, request }, testInfo) => {
-  const manifest = await (await request.get('/manifest.webmanifest')).json()
+  const manifest = await (await request.get('./manifest.webmanifest')).json()
   expect(manifest.name).toBe('JRS Offertecalculator'); expect(manifest.display).toBe('standalone')
+  expect(manifest.start_url).toBe(new URL(testInfo.project.use.baseURL!).pathname)
+  expect(manifest.scope).toBe(manifest.start_url)
+  for (const icon of manifest.icons) expect(icon.src.startsWith(manifest.scope)).toBe(true)
   expect(manifest.icons.map((i: { sizes: string }) => i.sizes)).toEqual(['192x192', '512x512', '512x512'])
   for (const width of [320, 393, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 })
@@ -175,14 +178,36 @@ test('alle diensten hebben werkende regelprijzen en vereisen controle op dubbelt
   const pdfText = execFileSync('pdftotext', [(await download.path())!, '-'], { encoding: 'utf8' })
   for (const title of ['Rolluiken', 'Garagepoorten', 'Veranda', '€ 158,00']) expect(pdfText).toContain(title)
 })
-test('installatieknop vangt het browseraanbod op voordat installatiehulp is geopend', async ({ page }) => {
+test('installatiehulp bewaart het browseraanbod en respecteert het iPhone-platform', async ({ page }, testInfo) => {
   await page.evaluate(() => {
     const prompt = new Event('beforeinstallprompt', { cancelable: true })
     Object.assign(prompt, { prompt: async () => {}, userChoice: Promise.resolve({ outcome: 'accepted' }) })
     window.dispatchEvent(prompt)
   })
   await page.getByRole('button', { name: 'Installatiehulp openen' }).click()
+  if (testInfo.project.name === 'iphone-webkit') {
+    await expect(page.getByRole('heading', { name: 'Op iPhone installeren' })).toBeVisible()
+    await expect(page.getByText('Zet op beginscherm', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Installeer app', exact: true })).toHaveCount(0)
+    return
+  }
   await expect(page.getByRole('button', { name: 'Installeer app', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Installeer app', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Installeer app', exact: true })).toHaveCount(0)
+})
+test('iPhone-installatiehulp toont Safari en Zet op beginscherm', async ({ browser }, testInfo) => {
+  // This checks iPhone UI detection in each engine; it does not simulate native iOS installation.
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL,
+    viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  })
+  try {
+    const page = await context.newPage(); await page.goto('./')
+    await page.getByRole('button', { name: 'Installatiehulp openen' }).click()
+    await expect(page.getByRole('heading', { name: 'Op iPhone installeren' })).toBeVisible()
+    await expect(page.getByText('Zet op beginscherm', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Installeer app', exact: true })).toHaveCount(0)
+    await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', `${new URL(testInfo.project.use.baseURL!).pathname}icon-192.png`)
+  } finally { await context.close() }
 })

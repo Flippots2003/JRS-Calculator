@@ -98,7 +98,23 @@ npm ci
 npm run build
 ```
 
-Publiceer **de volledige inhoud van `dist/`** op een statische HTTPS-host, bijvoorbeeld een eigen webserver of een statische hostingdienst. Geen backend of geheime sleutels nodig. De app is geconfigureerd voor de hoofdmap van een eigen domein/subdomein; voor een pad zoals `/calculator/` moeten Vite `base`, manifestpaden en service-worker-scope eerst consequent aangepast worden.
+Publiceer **de volledige inhoud van `dist/`** op een statische HTTPS-host, bijvoorbeeld een eigen webserver of een statische hostingdienst. Geen backend of geheime sleutels nodig. Een gewone build gebruikt de hoofdmap van een domein/subdomein. Voor publicatie onder een subpad stel je `DEPLOY_BASE` in; de app past assetpaden, PWA-startadres, iconen, service-worker-scope en offline fallback samen aan:
+
+```sh
+DEPLOY_BASE=/JRS-Calculator/ npm run build
+DEPLOY_BASE=/JRS-Calculator/ npm run test:e2e
+```
+
+### GitHub Pages
+
+De workflow `.github/workflows/pages.yml` bouwt en publiceert de website bij iedere push naar `main`, op het repositorypad. GitHub Pages moet eenmalig door de repositorybeheerder worden geactiveerd:
+
+1. Open [Settings → Pages](https://github.com/Flippots2003/JRS-Calculator/settings/pages).
+2. Kies bij **Build and deployment → Source** de optie **GitHub Actions**.
+3. Open **Actions → Publish JRS Offertecalculator** en kies **Run workflow → main** als de eerste uitvoering al is mislukt doordat Pages nog niet was geactiveerd.
+4. Wacht totdat de jobs **build** en **deploy** groen zijn. De deployment toont dan het HTTPS-adres.
+
+Het standaardadres voor deze repository is `https://flippots2003.github.io/JRS-Calculator/`. Dat adres is pas een werkende website nadat de GitHub Pages-deployment is geslaagd. De workflow heeft alleen repository-leestoegang, Pages-publicatierechten en een OIDC-identiteit nodig; er zijn geen extra geheime sleutels nodig. GitHub staat het eenmalig activeren van Pages niet toe met de standaard workflowtoken.
 
 Host HTML, `sw.js` en `manifest.webmanifest` met hervalidatie; bestanden met een hash onder `assets/` mogen langdurig gecachet worden. Behoud oude assets tijdens een publicatie totdat bestaande clients de update kunnen installeren. Publiceer alle bestanden samen. Voorbeeld van een Nginx-configuratiefragment binnen je bestaande HTTPS-server:
 
@@ -115,7 +131,7 @@ location = /manifest.webmanifest {
 location /assets/ { add_header Cache-Control "public, max-age=31536000, immutable"; }
 ```
 
-Er is in deze workspace geen publieke HTTPS-deployment gemaakt. De cloudomgeving publiceren via omgevingsinstellingen bewaart de ontwikkelomgeving; dat publiceert de app niet automatisch op een publiek domein.
+De cloudomgeving publiceren via omgevingsinstellingen bewaart de ontwikkelomgeving; dat publiceert de app niet automatisch op een publiek domein. De afzonderlijke GitHub Pages-workflow verzorgt de apppublicatie. In deze cloudomgeving zijn `api.github.com` en `flippots2003.github.io` nodig om Pages te activeren en de website te verifiëren; hun toevoeging in een configuratiedraft is nog geen bewijs van live bereikbaarheid.
 
 ## Installeren op Android
 
