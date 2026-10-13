@@ -27,9 +27,21 @@ npm run dev
 npm test           # rekenscenario's, historische offertes, nummering en herstel
 npm run build      # TypeScript en productie-PWA naar dist/
 npm run test:e2e   # browserworkflow tegen de productiebuild
+npm run test:iphone # dezelfde workflow in WebKit met een iPhone 13-profiel
 ```
 
 Playwright gebruikt `/usr/bin/chromium` wanneer dat bestaat. Anders installeer je de browser eenmalig met `npx playwright install chromium`. Met `PLAYWRIGHT_CHROMIUM_EXECUTABLE` kun je een ander Chromium-pad opgeven. De PDF-inhoudstest gebruikt `pdftotext` uit Poppler (`poppler-utils` op Debian/Ubuntu). De browsertests draaien met Pixel 7-scherminstellingen; dat is geen test op een fysieke telefoon.
+
+Voor de iPhone-tests installeer je daarnaast WebKit met `npx playwright install --with-deps webkit`. `npm run test:iphone` gebruikt WebKit met de schermgrootte, touchinstellingen en user-agent van een iPhone 13. `npm run test:browsers` voert beide browserprojecten uit. WebKit op Linux simuleert belangrijke Safari-browserfuncties, maar geen echte iOS-installatie, toetsenbordweergave, native deelmenu of Safari-PDF-viewer.
+
+In een cloudomgeving met beperkte schrijfrechten kan de browsercache onder `/workspace` staan:
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH=/workspace/.cache/ms-playwright npx playwright install webkit
+PLAYWRIGHT_BROWSERS_PATH=/workspace/.cache/ms-playwright npm run test:iphone
+```
+
+De officiële browserdownloads gebruiken `cdn.playwright.dev` en, als fallback, `playwright.download.prss.microsoft.com`. Die domeinen moeten in de netwerkinstellingen toegestaan zijn. De iPhone-test is voorbereid, maar nog niet uitgevoerd: de WebKit-download werd in deze omgeving met HTTP 403 (`Domain forbidden`) geblokkeerd. Dit is een omgevingsblokkade, geen aangetoonde appfout.
 
 Vite-ontwikkeling gebruikt geen productie-service-worker. Test offlinewerking met de productiebuild:
 
@@ -114,6 +126,10 @@ Er is in deze workspace geen publieke HTTPS-deployment gemaakt. De cloudomgeving
 5. Herstart in vliegtuigmodus en maak een testofferte. Controleer de PDF-download en herstel van een back-up op je eigen toestel.
 
 PDF-delen verschijnt alleen als het native deelmenu PDF-bestanden ondersteunt. Sommige mobiele browsers tonen een PDF niet in het ingebouwde voorbeeld; downloaden en openen met een PDF-app is dan de fallback. De fysieke Android-installatie, het native deelmenu en de PDF-viewer zijn nog niet op een echte telefoon geverifieerd.
+
+## Installeren op iPhone
+
+Open de gepubliceerde HTTPS-URL in **Safari**, tik op **Delen → Zet op beginscherm** en open de app via het nieuwe icoon. Wacht op **Offline beschikbaar** voordat je zonder internet werkt. Safari biedt geen Android-installatieprompt. PDF-download, delen, opslagbehoud na een iOS-update en de offlineherstart moeten op een echte iPhone nog gecontroleerd worden; een gesimuleerde browser kan dat niet volledig verifiëren.
 
 Updates tonen een melding in de app en worden bewust geïnstalleerd nadat het concept is opgeslagen. Updates wissen de IndexedDB-database niet. Houd bij toekomstige ontwikkeling databaseversies additief en voorziet expliciete migraties voor nieuwe back-up- of berekeningsversies.
 

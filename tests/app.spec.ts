@@ -95,13 +95,14 @@ test('PWA start offline; klanten, tarieven, offertes en PDF werken zonder netwer
   await page.reload()
   await expect(page.locator('.price-bar strong')).toHaveText(/50,00/)
 })
-test('JSON-back-up herstelt gegevens; foutieve bestanden laten opslag intact', async ({ page, browser }) => {
+test('JSON-back-up herstelt gegevens; foutieve bestanden laten opslag intact', async ({ page, browser }, testInfo) => {
   await setRate(page, '5'); await fillQuote(page); await save(page)
   await navigate(page, 'Instellingen'); await page.getByRole('tab', { name: 'Back-up & app' }).click()
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Volledige back-up exporteren' }).click()
   const download = await downloadPromise; const path = (await download.path())!
-  const fresh = await browser.newContext({ viewport: { width: 393, height: 851 }, isMobile: true, hasTouch: true })
+  const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, baseURL } = testInfo.project.use
+  const fresh = await browser.newContext({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, baseURL })
   const p = await fresh.newPage(); p.on('dialog', d => d.accept()); await p.goto('/')
   await navigate(p, 'Instellingen'); await p.getByRole('tab', { name: 'Back-up & app' }).click()
   await p.locator('input[type=file]').setInputFiles(path)
@@ -133,7 +134,7 @@ test('klant zonder offerte, alle dienstcategorieën, dupliceren en vorige versie
   await page.getByLabel(/Status JRS-/).first().selectOption('Goedgekeurd')
   await page.getByLabel('Offertestatus filter').selectOption('Goedgekeurd'); await expect(page.locator('.quote-card')).toHaveCount(1)
 })
-test('mobiele layout blijft binnen het scherm; manifest en app-iconen aanwezig', async ({ page, request }) => {
+test('mobiele layout blijft binnen het scherm; manifest en app-iconen aanwezig', async ({ page, request }, testInfo) => {
   const manifest = await (await request.get('/manifest.webmanifest')).json()
   expect(manifest.name).toBe('JRS Offertecalculator'); expect(manifest.display).toBe('standalone')
   expect(manifest.icons.map((i: { sizes: string }) => i.sizes)).toEqual(['192x192', '512x512', '512x512'])
@@ -142,9 +143,9 @@ test('mobiele layout blijft binnen het scherm; manifest en app-iconen aanwezig',
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   }
   await page.setViewportSize({ width: 393, height: 851 })
-  await page.screenshot({ path: 'test-results/calculator-mobile.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('calculator-mobile.png'), fullPage: true })
   await page.setViewportSize({ width: 1280, height: 900 })
-  await page.screenshot({ path: 'test-results/calculator-desktop.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('calculator-desktop.png'), fullPage: true })
 })
 test('alle diensten hebben werkende regelprijzen en vereisen controle op dubbeltelling', async ({ page }) => {
   await setRate(page, '5'); await fillQuote(page)

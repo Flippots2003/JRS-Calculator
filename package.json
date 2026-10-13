@@ -10,7 +10,9 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=android-chrome",
+    "test:iphone": "playwright test --project=iphone-webkit",
+    "test:browsers": "playwright test",
     "check": "tsc -b"
   },
   "dependencies": {
