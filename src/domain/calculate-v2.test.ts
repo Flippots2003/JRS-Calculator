@@ -1,11 +1,12 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
+import { previousStandardRates } from './standard-rates'
 import { calculate } from './calculate'
 import { defaultSettings, legacyDefaultSettings, emptyDraft } from './models'
 import { upgradeDraft, upgradeSettings } from './upgrade'
 import { calculationSchema } from './models'
 import { createBackup, restoreBackup } from '../storage/backup'
-import { JrsDatabase, saveQuote, saveSettings } from '../storage/database'
+import { JrsDatabase, saveQuote, saveSettings, loadSettings, loadWorkspace, saveWorkspace } from '../storage/database'
 
 function fixture() {
   const settings = defaultSettings(); const draft = emptyDraft()
@@ -90,4 +91,35 @@ describe('Nieuwe exclusieve prijsregels', () => {
       expect(restored.draft.windowCleaning).toBe('both'); expect(restored.result.exclusiveCents).toBe(8750)
     } finally { await source.delete(); await target.delete() }
   })
+  it('verlaagt alle standaardprijzen en tijden, met vier minuten voor een groot raam', () => {
+    const settings = defaultSettings()
+    for (const [id, old] of Object.entries(previousStandardRates)) {
+      expect(settings.rates[id].priceCents).toBeLessThan(old.priceCents)
+      expect(settings.rates[id].minutes).toBeLessThan(old.minutes)
+    }
+    expect(settings.rates['windows-outside-2']).toEqual({ priceCents: 800, minutes: 4 })
+    const draft = emptyDraft(); draft.lines.find(l => l.id === 'windows-outside-2')!.quantity = 10
+    expect(calculate(draft, settings).totalMinutes).toBe(50)
+  })
+  it('werkt bestaande standaardtarieven bij maar bewaart eigen afwijkingen en historische concepten', async () => {
+    const database = new JrsDatabase(crypto.randomUUID())
+    try {
+      const old = defaultSettings(); old.tariffRevision = 1; old.rates = structuredClone(previousStandardRates)
+      old.rates['windows-outside-1'].priceCents = 777
+      old.rates['garages-0'].minutes = 13
+      await saveSettings(old, database)
+      const draft = emptyDraft(); draft.lines[6].quantity = 10
+      const quote = await saveQuote(draft, old, null, database)
+      const updated = await loadSettings(database)
+      expect(updated.rates['windows-outside-2']).toEqual({ priceCents: 800, minutes: 4 })
+      expect(updated.rates['windows-outside-1']).toEqual({ priceCents: 777, minutes: 3 })
+      expect(updated.rates['garages-0']).toEqual({ priceCents: 2200, minutes: 13 })
+      expect((await database.quotes.get(quote.id))!.settings.rates['windows-outside-2'].minutes).toBe(8)
+      expect((await loadWorkspace(database))!.settings.rates['windows-outside-2'].minutes).toBe(8)
+      await saveWorkspace({ draft: emptyDraft(), settings: old, editingId: null }, database)
+      expect((await loadWorkspace(database))!.settings.rates['windows-outside-2'].minutes).toBe(4)
+      expect(await loadSettings(database)).toEqual(updated)
+    } finally { await database.delete() }
+  })
+
 })

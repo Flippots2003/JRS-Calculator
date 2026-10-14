@@ -19,7 +19,7 @@ export async function loadSettings(database = db): Promise<Settings> {
   const entry = await database.meta.get('settings')
   const stored = entry ? settingsSchema.parse(entry.value) : defaultSettings()
   const settings = upgradeSettings(stored)
-  if (stored.pricingVersion !== 2) await database.meta.put({ key: 'settings', value: settings })
+  if (stored.pricingVersion !== 2 || stored.tariffRevision !== settings.tariffRevision) await database.meta.put({ key: 'settings', value: settings })
   return settings
 }
 export async function saveSettings(settings: Settings, database = db) {
@@ -35,7 +35,7 @@ export async function loadWorkspace(database = db): Promise<Workspace | null> {
   if (!row) return null
   const data = row.value as Workspace
   const oldSettings = settingsSchema.parse(data.settings)
-  return { draft: upgradeDraft(draftSchema.parse(data.draft), oldSettings), settings: upgradeSettings(oldSettings), editingId: data.editingId }
+  return { draft: upgradeDraft(draftSchema.parse(data.draft), oldSettings), settings: upgradeSettings(oldSettings, !data.editingId), editingId: data.editingId }
 }
 export async function saveWorkspace(workspace: Workspace, database = db) {
   await database.meta.put({ key: 'workspace', value: structuredClone(workspace) })

@@ -15,6 +15,7 @@ export const customerSchema = z.object({
 })
 export const rateSchema = z.object({ priceCents: centsSchema.nullable(), minutes: minutesSchema.nullable() })
 export const settingsSchema = z.object({
+  tariffRevision: z.union([z.literal(1), z.literal(2)]).default(1),
   pricingVersion: z.union([z.literal(1), z.literal(2)]).default(1),
   company: z.object({
     name: text, address: text, phone: text, email: z.union([z.literal(''), z.email()]),
@@ -95,7 +96,7 @@ export function emptyDraft(): Draft {
 }
 export function legacyDefaultSettings(): Settings {
   return {
-    pricingVersion: 1,
+    tariffRevision: 1, pricingVersion: 1,
     company: { name: "Jarne's Ramenservice", address: '', phone: '', email: '', enterpriseNumber: '', vatNumber: '', website: '', logo: '', quoteText: '', terms: '', payment: '', validityDays: 30 },
     rates: Object.fromEntries(catalog.map(c => [c.id, { priceCents: null, minutes: null }])),
     priceBasis: 'inclusive', vatBps: 2100, vatRegime: 'normal', vatExplanation: '',
@@ -106,7 +107,7 @@ export function legacyDefaultSettings(): Settings {
 }
 
 export function defaultSettings(): Settings {
-  return { ...legacyDefaultSettings(), pricingVersion: 2, priceBasis: 'exclusive',
+  return { ...legacyDefaultSettings(), pricingVersion: 2, tariffRevision: 2, priceBasis: 'exclusive',
     rates: structuredClone(standardRates), minimumHourlyCents: 5500,
     minimumOrderCents: 4000, preparationMinutes: 10,
   }

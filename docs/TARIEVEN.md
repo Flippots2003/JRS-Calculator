@@ -10,15 +10,17 @@ JRS gebruikt daarom een arbeidsnorm van **€55/u excl. btw** en een minimumopdr
 
 De gekozen stukprijzen bieden ruimte boven de arbeidsnorm. Een te lage stukprijs wordt op basis van de geschatte tijd automatisch verhoogd tot de ingestelde uurgrens. Dat beschermt alleen als de tijdsinschatting klopt; het garandeert geen winst. Vervoer, niet-factureerbare tijd, verzekering, materiaal en bijdragen vragen eveneens dekking.
 
+De tweede tariefversie verlaagt alle stukprijzen ongeveer 8–13% en verkort de richttijden. Een groot raam krijgt op basis van JRS’ eigen werksnelheid maximaal 4 minuten voor de buitenzijde (7 minuten voor binnen en buiten). Andere tijden blijven startschattingen. De arbeidsnorm, minimumopdracht en voorbereiding blijven behouden. Bij bestaande installaties worden alleen ongewijzigde standaardprijzen en standaardtijden aangepast; eigen afwijkingen en opgeslagen offertes blijven behouden.
+
 ## Ramen: één telling, buitenbasis
 
 | Volledig raam, inclusief kader | Stukprijs buiten | Geschatte minuten buiten |
 |---|---:|---:|
-| Klein raam | €4 | 3 |
-| Normaal raam | €6 | 5 |
-| Groot raam | €9 | 8 |
-| Schuifraam | €12 | 10 |
-| Dakraam | €12 | 10 |
+| Klein raam | €3,50 | 2 |
+| Normaal raam | €5,50 | 3 |
+| Groot raam | €8 | 4 |
+| Schuifraam | €10,50 | 6 |
+| Dakraam | €10,50 | 6 |
 
 Kies bij de totalen **Enkel buiten** of **Binnen & buiten (+75%)**. Die keuze geldt voor alle getelde ramen. De 75% wordt afzonderlijk op de buitenbasis van de ramen berekend, niet op rolluiken, poorten, veranda’s, materiaal of verplaatsing. De geschatte raamtijd stijgt eveneens met 75%. De vaste voorbereidingstijd wordt maar één keer toegevoegd.
 
@@ -28,18 +30,18 @@ Een minimumopdracht kan de toeslag bij een heel kleine opdracht absorberen. De a
 
 | Dienst | Richtprijs per object | Geschatte minuten |
 |---|---:|---:|
-| Klein rolluik | €12 | 10 |
-| Standaard rolluik | €20 | 15 |
-| Groot rolluik | €30 | 25 |
-| Standaard garagepoort | €25 | 20 |
-| Brede garagepoort | €40 | 30 |
-| Grote / dubbele garagepoort | €55 | 45 |
-| Veranda klein | €80 | 75 |
-| Veranda middelgroot | €130 | 120 |
-| Veranda groot | €200 | 180 |
-| Glazen tuinhuis klein | €60 | 60 |
-| Glazen tuinhuis middelgroot | €100 | 90 |
-| Glazen tuinhuis groot | €160 | 150 |
+| Klein rolluik | €10,50 | 7 |
+| Standaard rolluik | €17,50 | 11 |
+| Groot rolluik | €26,50 | 18 |
+| Standaard garagepoort | €22 | 15 |
+| Brede garagepoort | €35 | 22 |
+| Grote / dubbele garagepoort | €48 | 32 |
+| Veranda klein | €70 | 55 |
+| Veranda middelgroot | €115 | 90 |
+| Veranda groot | €175 | 135 |
+| Glazen tuinhuis klein | €52,50 | 45 |
+| Glazen tuinhuis middelgroot | €87,50 | 65 |
+| Glazen tuinhuis groot | €140 | 110 |
 
 Deze objectprijzen veronderstellen normale vervuiling en bereikbaarheid. Bouwresten, uitzonderlijke afmetingen, dieptereiniging, moeilijk bereikbare daken en ander extra werk vragen een aangepaste prijs en tijd. Glas inbegrepen in een veranda of tuinhuis mag niet nog eens als raam worden geteld.
 

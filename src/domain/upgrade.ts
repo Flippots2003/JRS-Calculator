@@ -1,15 +1,28 @@
+import { previousStandardRates, standardRates } from './standard-rates'
 import { catalog } from './catalog'
 import { defaultSettings, type Settings, type Draft } from './models'
 import { roundRatio } from './money'
 
 export function upgradeSettings(old: Settings, applyNewMinimums = true): Settings {
-  if (old.pricingVersion === 2) return structuredClone({ ...old, priceBasis: 'exclusive' })
+  if (old.pricingVersion === 2) {
+    const next = structuredClone({ ...old, priceBasis: 'exclusive' as const })
+    if (applyNewMinimums && old.tariffRevision !== 2) {
+      for (const item of catalog) {
+        const rate = next.rates[item.id], previous = previousStandardRates[item.id], current = standardRates[item.id]
+        // Migrate each untouched default independently; keep custom prices/times.
+        if (rate.priceCents === previous.priceCents) rate.priceCents = current.priceCents
+        if (rate.minutes === previous.minutes) rate.minutes = current.minutes
+      }
+      next.tariffRevision = 2
+    }
+    return next
+  }
   const defaults = defaultSettings()
   const vat = old.vatRegime === 'exempt' ? 0 : old.vatBps
   const net = (n: number) => roundRatio(n, 10000, 10000 + vat)
   const inputNet = (n: number) => old.priceBasis === 'inclusive' ? net(n) : n
   return {
-    ...structuredClone(old), pricingVersion: 2, priceBasis: 'exclusive',
+    ...structuredClone(old), tariffRevision: 2, pricingVersion: 2, priceBasis: 'exclusive',
     rates: Object.fromEntries(catalog.map(item => {
       const rate = old.rates[item.id]
       return [item.id, { priceCents: rate.priceCents === null ? defaults.rates[item.id].priceCents : inputNet(rate.priceCents), minutes: rate.minutes ?? defaults.rates[item.id].minutes }]
