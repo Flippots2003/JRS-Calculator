@@ -15,10 +15,12 @@ export function calculateExclusive(input: Draft, configuration: Settings): Calcu
     if (l.id.startsWith('windows-both-')) issues.push('Gebruik de enkele raamtelling en kies de reiniging bij de totalen.')
     if (price === null) issues.push(`Stel een prijs in voor ${item.name.toLowerCase()}.`)
     if (minutes === null) issues.push(`Stel de werktijd in voor ${item.name.toLowerCase()}.`)
+    const counts = l.id.startsWith('windows-outside-') ? l.difficultyCounts : null
+    const weightedBps = counts ? counts.reduce((sum, n, i) => sum + n * s.difficultyBps[i], 0) : 0
     const isBoth = l.id.startsWith('windows-outside-') && d.windowCleaning === 'both'
     return { ...l, name: item.name, group: item.group, unitCents: price,
       totalCents: price === null ? 0 : price * l.quantity,
-      minutes: minutes === null ? 0 : roundRatio(minutes * l.quantity, isBoth ? 175 : 100, 100),
+      minutes: minutes === null ? 0 : roundRatio(minutes * (l.quantity * 10000 + weightedBps), isBoth ? 175 : 100, 1000000),
     }
   })
   if (!lines.length) issues.push('Voeg minstens één onderdeel toe.')
@@ -29,7 +31,18 @@ export function calculateExclusive(input: Draft, configuration: Settings): Calcu
   const windowSupplementCents = d.windowCleaning === 'both' ? roundRatio(windowBase, 75, 100) : 0
   const totalMinutes = lines.reduce((sum, l) => sum + l.minutes, 0) + (lines.length ? s.preparationMinutes : 0)
   const surchargeBps = s.difficultyBps[d.difficulty] + s.accessBps[d.access]
-  const surchargeCents = roundRatio(baseCents + windowSupplementCents, surchargeBps, 10000)
+  const windowDifficultyCents = lines.filter(l => l.group === 'windows-outside' && l.difficultyCounts).reduce((sum, l) => {
+    const weighted = l.difficultyCounts!.reduce((n, count, i) => n + count * s.difficultyBps[i], 0)
+    return sum + roundRatio(l.unitCents ?? 0, weighted * (d.windowCleaning === 'both' ? 175 : 100), 1000000)
+  }, 0)
+  // Explicit window distributions replace the global difficulty, never add it twice.
+  const globalDifficultyBase = lines.filter(l => !l.difficultyCounts).reduce((sum, l) => sum + l.totalCents, 0)
+  const globalWindowBase = lines.filter(l => l.group === 'windows-outside' && !l.difficultyCounts).reduce((sum, l) => sum + l.totalCents, 0)
+  const globalBase = globalDifficultyBase + (d.windowCleaning === 'both' ? roundRatio(globalWindowBase, 75, 100) : 0)
+  // Preserve the original rounding for historical quotes without distributions.
+  const surchargeCents = lines.some(l => l.difficultyCounts)
+    ? windowDifficultyCents + roundRatio(globalBase, s.difficultyBps[d.difficulty], 10000) + roundRatio(baseCents + windowSupplementCents, s.accessBps[d.access], 10000)
+    : roundRatio(baseCents + windowSupplementCents, surchargeBps, 10000)
   const adjusted = baseCents + windowSupplementCents + surchargeCents
   const frequencyDiscountCents = roundRatio(adjusted, s.frequencyBps[d.frequency], 10000)
   const afterFrequency = adjusted - frequencyDiscountCents
@@ -54,7 +67,7 @@ export function calculateExclusive(input: Draft, configuration: Settings): Calcu
     if (manualWarnings.length && !d.manualConfirmed) issues.push('Bevestig bewust de handmatige prijs onder de ingestelde minimumgrenzen.')
   }
   const vatCents = roundRatio(exclusiveCents, vatBps, 10000)
-  return { calculationVersion: 2, windowSupplementCents, lines, issues, baseCents, totalMinutes, surchargeBps, surchargeCents,
+  return { calculationVersion: 2, windowSupplementCents, windowDifficultyCents, lines, issues, baseCents, totalMinutes, surchargeBps, surchargeCents,
     frequencyDiscountCents, extraDiscountCents, discountedLaborCents, minimumLaborCents, hourlyCorrectionCents, laborCents,
     materialCents, paidDeciKm, automaticTravelCents, travelCents, minimumCorrectionCents, automaticTotalCents,
     exclusiveCents, vatCents, totalCents: exclusiveCents + vatCents, vatBps, manualWarnings,

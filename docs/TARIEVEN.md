@@ -18,13 +18,23 @@ De tweede tariefversie verlaagt alle stukprijzen ongeveer 8–13% en verkort de 
 |---|---:|---:|
 | Klein raam | €3,50 | 2 |
 | Normaal raam | €5,50 | 3 |
-| Groot raam | €8 | 4 |
-| Schuifraam | €10,50 | 6 |
+| Groot raam | €7,50 | 4 |
+| Schuifraam | €9,50 | 6 |
 | Dakraam | €10,50 | 6 |
 
 Kies bij de totalen **Enkel buiten** of **Binnen & buiten (+75%)**. Die keuze geldt voor alle getelde ramen. De 75% wordt afzonderlijk op de buitenbasis van de ramen berekend, niet op rolluiken, poorten, veranda’s, materiaal of verplaatsing. De geschatte raamtijd stijgt eveneens met 75%. De vaste voorbereidingstijd wordt maar één keer toegevoegd.
 
 Een minimumopdracht kan de toeslag bij een heel kleine opdracht absorberen. De app toont zowel de raamtoeslag als de resterende minimumcorrectie, zodat het eindbedrag verklaarbaar blijft.
+
+## Moeilijkheid per raamsoort
+
+De derde tariefversie verlaagt een groot raam naar €7,50 en een schuifraam naar €9,50 exclusief btw. Onder elke raamsoort kun je het totaal verdelen over normaal, gemiddeld, moeilijk en zeer moeilijk. De standaardtoeslagen zijn respectievelijk 0%, 15%, 30% en 50%, aanpasbaar bij Instellingen. De geschatte tijd stijgt met dezelfde verhouding voor alleen de betrokken ramen; een normaal groot raam blijft 4 minuten buiten.
+
+Bij 5 normale formaatramen, verdeeld als 3 normaal, 1 gemiddeld en 1 moeilijk, is de buitenbasis 5 × €5,50 = €27,50. De moeilijkheidstoeslag bedraagt €2,48. Bij binnen en buiten geldt +75% ook op deze raamtoeslag. Minimumopdracht en uurgrens kunnen de uiteindelijke prijs verder verhogen.
+
+Nieuwe ramen worden aan normaal toegevoegd. Een gemiddeld, moeilijk of zeer moeilijk aantal invoeren haalt dat aantal uit normaal, zodat het totaal gelijk blijft. Normaal rechtstreeks wijzigen past het totaal aan. Bij verlaging van het totale aantal worden eerst normale ramen verwijderd, daarna gemiddeld, moeilijk en zeer moeilijk. De globale moeilijkheidskeuze geldt voor andere diensten en oudere raamtellingen die nog geen verdeling hebben. Een expliciete raamverdeling vervangt die globale moeilijkheid; er is geen dubbele toeslag. Bereikbaarheid blijft een aparte aanpassing op de volledige opdracht.
+
+Eigen prijzen en moeilijkheidstoeslagen blijven behouden bij de update; de oorspronkelijke standaardreeks met vier nulpercentages wordt ingevuld. Historische offertes houden hun oorspronkelijke tarieven, toeslagen en berekening. In PDF en back-up blijft de verdeling bewaard.
 
 ## Overige diensten
 

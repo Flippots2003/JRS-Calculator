@@ -1,4 +1,4 @@
-import { previousStandardRates, standardRates } from './standard-rates'
+import { previousStandardRates, revisionTwoRates, standardRates } from './standard-rates'
 import { catalog } from './catalog'
 import { defaultSettings, type Settings, type Draft } from './models'
 import { roundRatio } from './money'
@@ -6,14 +6,15 @@ import { roundRatio } from './money'
 export function upgradeSettings(old: Settings, applyNewMinimums = true): Settings {
   if (old.pricingVersion === 2) {
     const next = structuredClone({ ...old, priceBasis: 'exclusive' as const })
-    if (applyNewMinimums && old.tariffRevision !== 2) {
+    if (applyNewMinimums && old.tariffRevision !== 3) {
       for (const item of catalog) {
-        const rate = next.rates[item.id], previous = previousStandardRates[item.id], current = standardRates[item.id]
+        const rate = next.rates[item.id], previous = (old.tariffRevision === 1 ? previousStandardRates : revisionTwoRates)[item.id], current = standardRates[item.id]
         // Migrate each untouched default independently; keep custom prices/times.
         if (rate.priceCents === previous.priceCents) rate.priceCents = current.priceCents
         if (rate.minutes === previous.minutes) rate.minutes = current.minutes
       }
-      next.tariffRevision = 2
+      next.tariffRevision = 3
+      if (old.difficultyBps.every(p => p === 0)) next.difficultyBps = [0, 1500, 3000, 5000]
     }
     return next
   }
@@ -22,7 +23,7 @@ export function upgradeSettings(old: Settings, applyNewMinimums = true): Setting
   const net = (n: number) => roundRatio(n, 10000, 10000 + vat)
   const inputNet = (n: number) => old.priceBasis === 'inclusive' ? net(n) : n
   return {
-    ...structuredClone(old), tariffRevision: 2, pricingVersion: 2, priceBasis: 'exclusive',
+    ...structuredClone(old), difficultyBps: applyNewMinimums && old.difficultyBps.every(p => p === 0) ? defaults.difficultyBps : old.difficultyBps, tariffRevision: 3, pricingVersion: 2, priceBasis: 'exclusive',
     rates: Object.fromEntries(catalog.map(item => {
       const rate = old.rates[item.id]
       return [item.id, { priceCents: rate.priceCents === null ? defaults.rates[item.id].priceCents : inputNet(rate.priceCents), minutes: rate.minutes ?? defaults.rates[item.id].minutes }]

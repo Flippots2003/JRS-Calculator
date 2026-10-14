@@ -29,3 +29,10 @@ for (const [group, values] of Object.entries(revised)) values.forEach(([priceCen
     priceCents: Math.round(priceCents * 175 / 100), minutes: Math.round(minutes * 175 / 100),
   }
 })
+
+export const revisionTwoRates = structuredClone(standardRates)
+// Revision 3: slightly lower large-window and sliding-window prices.
+for (const [i, priceCents] of [[2, 750], [3, 950]]) {
+  standardRates[`windows-outside-${i}`].priceCents = priceCents
+  standardRates[`windows-both-${i}`].priceCents = Math.round(priceCents * 175 / 100)
+}

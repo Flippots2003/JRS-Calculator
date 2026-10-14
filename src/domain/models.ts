@@ -15,7 +15,7 @@ export const customerSchema = z.object({
 })
 export const rateSchema = z.object({ priceCents: centsSchema.nullable(), minutes: minutesSchema.nullable() })
 export const settingsSchema = z.object({
-  tariffRevision: z.union([z.literal(1), z.literal(2)]).default(1),
+  tariffRevision: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
   pricingVersion: z.union([z.literal(1), z.literal(2)]).default(1),
   company: z.object({
     name: text, address: text, phone: text, email: z.union([z.literal(''), z.email()]),
@@ -34,6 +34,7 @@ export const lineSchema = z.object({
   id: z.string().refine(id => catalog.some(c => c.id === id), 'Onbekende dienst.'),
   quantity: z.number().int().min(0).max(20_000),
   overridePriceCents: centsSchema.nullable(), overrideMinutes: minutesSchema.nullable(), note: text,
+  difficultyCounts: z.tuple([z.number().int().min(0).max(20_000), z.number().int().min(0).max(20_000), z.number().int().min(0).max(20_000), z.number().int().min(0).max(20_000)]).nullable().optional(),
 })
 export const draftSchema = z.object({
   windowCleaning: z.enum(['outside', 'both']).default('outside'),
@@ -44,7 +45,13 @@ export const draftSchema = z.object({
   distanceDeciKm: z.number().int().min(0).max(100_000), travelOverrideCents: centsSchema.nullable(),
   manualTotalCents: centsSchema.nullable(), manualConfirmed: z.boolean(), overlapConfirmed: z.boolean(),
   vatConfirmed: z.boolean(), notes: text,
-}).refine(d => d.discountType !== 'percent' || d.discountValue <= 10_000, 'Een korting kan maximaal 100% bedragen.')
+}).refine(d => d.discountType !== 'percent' || d.discountValue <= 10_000, 'Een korting kan maximaal 100% bedragen.').superRefine((d, ctx) => {
+  d.lines.forEach((line, i) => {
+    if (line.difficultyCounts && (!line.id.startsWith('windows-outside-') || line.difficultyCounts.reduce((sum, n) => sum + n, 0) !== line.quantity)) {
+      ctx.addIssue({ code: 'custom', path: ['lines', i, 'difficultyCounts'], message: 'De moeilijkheidsaantallen moeten overeenkomen met het aantal ramen.' })
+    }
+  })
+})
 export type Customer = z.infer<typeof customerSchema>
 export type Rate = z.infer<typeof rateSchema>
 export type Settings = z.infer<typeof settingsSchema>
@@ -55,6 +62,7 @@ const computedNumber = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
 export const calculationSchema = z.object({
   calculationVersion: z.union([z.literal(1), z.literal(2)]),
   windowSupplementCents: computedNumber.default(0),
+  windowDifficultyCents: computedNumber.default(0),
   lines: z.array(lineSchema.extend({ name: text, group: z.enum(['windows-both', 'windows-outside', 'shutters', 'garages', 'conservatories']), unitCents: computedNumber.nullable(), totalCents: computedNumber, minutes: computedNumber })),
   issues: z.array(text), baseCents: computedNumber, totalMinutes: computedNumber, surchargeBps: computedNumber,
   surchargeCents: computedNumber, frequencyDiscountCents: computedNumber, extraDiscountCents: computedNumber,
@@ -107,8 +115,8 @@ export function legacyDefaultSettings(): Settings {
 }
 
 export function defaultSettings(): Settings {
-  return { ...legacyDefaultSettings(), pricingVersion: 2, tariffRevision: 2, priceBasis: 'exclusive',
-    rates: structuredClone(standardRates), minimumHourlyCents: 5500,
+  return { ...legacyDefaultSettings(), pricingVersion: 2, tariffRevision: 3, priceBasis: 'exclusive',
+    rates: structuredClone(standardRates), difficultyBps: [0, 1500, 3000, 5000], minimumHourlyCents: 5500,
     minimumOrderCents: 4000, preparationMinutes: 10,
   }
 }

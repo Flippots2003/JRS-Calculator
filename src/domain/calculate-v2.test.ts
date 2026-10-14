@@ -1,10 +1,10 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
-import { previousStandardRates } from './standard-rates'
+import { previousStandardRates, revisionTwoRates } from './standard-rates'
 import { calculate } from './calculate'
 import { defaultSettings, legacyDefaultSettings, emptyDraft } from './models'
 import { upgradeDraft, upgradeSettings } from './upgrade'
-import { calculationSchema } from './models'
+import { calculationSchema, draftSchema } from './models'
 import { createBackup, restoreBackup } from '../storage/backup'
 import { JrsDatabase, saveQuote, saveSettings, loadSettings, loadWorkspace, saveWorkspace } from '../storage/database'
 
@@ -97,7 +97,7 @@ describe('Nieuwe exclusieve prijsregels', () => {
       expect(settings.rates[id].priceCents).toBeLessThan(old.priceCents)
       expect(settings.rates[id].minutes).toBeLessThan(old.minutes)
     }
-    expect(settings.rates['windows-outside-2']).toEqual({ priceCents: 800, minutes: 4 })
+    expect(settings.rates['windows-outside-2']).toEqual({ priceCents: 750, minutes: 4 })
     const draft = emptyDraft(); draft.lines.find(l => l.id === 'windows-outside-2')!.quantity = 10
     expect(calculate(draft, settings).totalMinutes).toBe(50)
   })
@@ -111,7 +111,7 @@ describe('Nieuwe exclusieve prijsregels', () => {
       const draft = emptyDraft(); draft.lines[6].quantity = 10
       const quote = await saveQuote(draft, old, null, database)
       const updated = await loadSettings(database)
-      expect(updated.rates['windows-outside-2']).toEqual({ priceCents: 800, minutes: 4 })
+      expect(updated.rates['windows-outside-2']).toEqual({ priceCents: 750, minutes: 4 })
       expect(updated.rates['windows-outside-1']).toEqual({ priceCents: 777, minutes: 3 })
       expect(updated.rates['garages-0']).toEqual({ priceCents: 2200, minutes: 13 })
       expect((await database.quotes.get(quote.id))!.settings.rates['windows-outside-2'].minutes).toBe(8)
@@ -120,6 +120,73 @@ describe('Nieuwe exclusieve prijsregels', () => {
       expect((await loadWorkspace(database))!.settings.rates['windows-outside-2'].minutes).toBe(4)
       expect(await loadSettings(database)).toEqual(updated)
     } finally { await database.delete() }
+  })
+
+  it('rekent moeilijkheid alleen voor de toegewezen ramen en combineert die met binnen/buiten', () => {
+    const { settings, draft } = fixture(); settings.rates['windows-outside-1'] = { priceCents: 550, minutes: 3 }
+    draft.lines[6].quantity = 5; draft.lines[6].difficultyCounts = [3, 1, 1, 0]
+    draft.difficulty = 3 // Must not add the global 50% to distributed windows.
+    let result = calculate(draft, settings)
+    expect(result.baseCents).toBe(2750); expect(result.windowDifficultyCents).toBe(248)
+    expect(result.surchargeCents).toBe(248); expect(result.totalMinutes).toBe(16)
+    expect(result.exclusiveCents).toBe(2998)
+    draft.windowCleaning = 'both'; result = calculate(draft, settings)
+    expect(result.windowSupplementCents).toBe(2063); expect(result.windowDifficultyCents).toBe(433)
+    expect(result.totalMinutes).toBe(29); expect(result.exclusiveCents).toBe(5246)
+  })
+  it('houdt globale moeilijkheid voor overige diensten en bereikbaarheid voor de gehele opdracht', () => {
+    const { settings, draft } = fixture()
+    draft.lines[6].quantity = 5; draft.lines[6].difficultyCounts = [3, 1, 1, 0]
+    draft.difficulty = 2; draft.access = 1; settings.accessBps[1] = 1000
+    const shutter = draft.lines.find(l => l.id === 'shutters-0')!; shutter.quantity = 1
+    const result = calculate(draft, settings)
+    expect(result.windowDifficultyCents).toBe(225)
+    expect(result.surchargeCents).toBe(225 + 315 + 355)
+  })
+  it('weigert onjuiste verdelingen en verdelingen bij andere diensten', () => {
+    const { draft } = fixture(); draft.lines[6].difficultyCounts = [3, 1, 1, 0]
+    expect(draftSchema.safeParse(draft).success).toBe(false)
+    draft.lines[6].difficultyCounts = [10, 0, 0, 0]
+    expect(draftSchema.safeParse(draft).success).toBe(true)
+    draft.lines.find(l => l.id === 'shutters-0')!.difficultyCounts = [0, 0, 0, 0]
+    expect(draftSchema.safeParse(draft).success).toBe(false)
+  })
+  it('migreert versie-2 standaardprijzen zonder eigen prijzen of historische snapshots aan te passen', () => {
+    const old = defaultSettings(); old.tariffRevision = 2; old.rates = structuredClone(revisionTwoRates); old.difficultyBps = [0, 0, 0, 0]
+    old.rates['windows-outside-3'].priceCents = 999
+    const next = upgradeSettings(old)
+    expect(next.rates['windows-outside-2'].priceCents).toBe(750)
+    expect(next.rates['windows-outside-3'].priceCents).toBe(999)
+    expect(next.difficultyBps).toEqual([0, 1500, 3000, 5000])
+    expect(upgradeSettings(old, false)).toEqual(old)
+    old.difficultyBps = [0, 1000, 2500, 4000]
+    expect(upgradeSettings(old).difficultyBps).toEqual(old.difficultyBps)
+  })
+  it('bewaart raamverdelingen en oorspronkelijke versie-2 offertes in dezelfde back-up', async () => {
+    const source = new JrsDatabase(crypto.randomUUID()); const target = new JrsDatabase(crypto.randomUUID())
+    try {
+      const { settings, draft } = fixture(); await saveSettings(settings, source)
+      const historical = await saveQuote(draft, settings, null, source)
+      draft.lines[6].difficultyCounts = [6, 2, 1, 1]
+      const quote = await saveQuote(draft, settings, null, source)
+      const backup = await createBackup(source)
+      const raw = JSON.parse(JSON.stringify(backup))
+      delete raw.quotes.find((q: { id: string }) => q.id === historical.id).result.windowDifficultyCents
+      await restoreBackup(raw, target)
+      expect((await target.quotes.get(quote.id))!.draft.lines[6].difficultyCounts).toEqual([6, 2, 1, 1])
+      expect((await target.quotes.get(historical.id))!.result.exclusiveCents).toBe(5000)
+    } finally { await source.delete(); await target.delete() }
+  })
+
+  it('rekent ook geldige grote invoer exact zonder onveilige tussenproducten', () => {
+    const { settings, draft } = fixture()
+    settings.rates['windows-outside-1'].priceCents = 100_000_000
+    settings.difficultyBps[3] = 10000
+    draft.lines[6].quantity = 20000; draft.lines[6].difficultyCounts = [0, 0, 0, 20000]
+    draft.windowCleaning = 'both'
+    const result = calculate(draft, settings)
+    expect(result.windowDifficultyCents).toBe(3_500_000_000_000)
+    expect(result.exclusiveCents).toBe(7_000_000_000_000)
   })
 
 })

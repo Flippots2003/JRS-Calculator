@@ -271,3 +271,9 @@ input[type=checkbox] { appearance: auto; width: 18px; height: 18px; min-height: 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 
 .quote-amount small { display: block; font-size: 10px; font-weight: 400; letter-spacing: 0; text-align: right; }
+
+.window-difficulty { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.difficulty-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.difficulty-grid .field { min-width: 0; }
+.difficulty-grid .field > span:first-child { font-size: 12px; }
+@media (min-width: 1100px) { .difficulty-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

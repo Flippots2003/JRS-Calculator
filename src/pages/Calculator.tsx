@@ -1,3 +1,4 @@
+import { windowCounts, resizeWindow, assignWindowDifficulty } from '../domain/window-difficulty'
 import { customerLabel } from '../domain/customers'
 import { useMemo, useState } from 'react'
 import { ArrowUpRight, ChevronDown, FileText, Minus, Plus, RotateCcw, Save, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react'
@@ -22,7 +23,12 @@ export function Calculator({ draft, settings, customers, editingNumber, onChange
   const [showErrors, setShowErrors] = useState(false)
   const set = <K extends keyof Draft>(key: K, next: Draft[K]) => onChange({ ...draft, [key]: next, ...(key !== 'manualConfirmed' && key !== 'customer' && key !== 'notes' ? { manualConfirmed: false } : {}) })
   function setLine(id: string, change: Partial<QuoteLine>) {
-    set('lines', draft.lines.map(line => line.id === id ? { ...line, ...change } : line))
+    set('lines', draft.lines.map(line => {
+      if (line.id !== id) return line
+      const next = { ...line, ...change }
+      return id.startsWith('windows-outside-') && change.quantity !== undefined && change.difficultyCounts === undefined
+        ? { ...resizeWindow(line, change.quantity, draft.difficulty), ...change } : next
+    }))
   }
   function toggleGroup(group: GroupId) {
     const next = new Set(expanded)
@@ -30,7 +36,7 @@ export function Calculator({ draft, settings, customers, editingNumber, onChange
       const active = draft.lines.some(l => catalog.find(c => c.id === l.id)!.group === group && l.quantity > 0)
       if (active && !window.confirm('Deze dienst en de ingevoerde aantallen verwijderen?')) return
       next.delete(group)
-      set('lines', draft.lines.map(l => catalog.find(c => c.id === l.id)!.group === group ? { ...l, quantity: 0 } : l))
+      set('lines', draft.lines.map(l => catalog.find(c => c.id === l.id)!.group === group ? { ...l, quantity: 0, ...(l.difficultyCounts ? { difficultyCounts: [0, 0, 0, 0] as [number, number, number, number] } : {}) } : l))
     } else next.add(group)
     setExpanded(next)
   }
@@ -50,10 +56,12 @@ export function Calculator({ draft, settings, customers, editingNumber, onChange
         <div className="section-body"><div className="service-picker">{groups.map(group => <button key={group.id} className={`service-chip ${expanded.has(group.id) ? 'selected' : ''}`} onClick={() => toggleGroup(group.id)} aria-pressed={expanded.has(group.id)}>{expanded.has(group.id) ? <Minus size={15} /> : <Plus size={15} />}{group.short}</button>)}</div>
         {groups.filter(group => expanded.has(group.id)).map(group => <div className="service-group" key={group.id}><div className="service-group-title"><h3>{group.name}</h3><p>{group.description}</p></div>{catalog.filter(item => item.group === group.id).map(item => {
           const line = draft.lines.find(l => l.id === item.id) ?? { id: item.id, quantity: 0, overridePriceCents: null, overrideMinutes: null, note: '' }
+          const counts = windowCounts(line, draft.difficulty)
           const price = line.overridePriceCents ?? settings.rates[item.id].priceCents
           const minutes = line.overrideMinutes ?? settings.rates[item.id].minutes
           return <div className={`service-line ${line.quantity ? 'active' : ''}`} key={item.id}>
             <div className="line-main"><div className="line-label"><strong>{item.name}</strong><small>{price === null ? <span className="missing">Prijs nog niet ingesteld</span> : `${money(price)} / stuk`}{minutes !== null ? ` · ${minutes} min` : ' · tijd ontbreekt'}</small></div><div className="stepper"><button aria-label={`${item.name} ${group.short} verminderen`} onClick={() => setLine(item.id, { quantity: Math.max(0, line.quantity - 1) })} disabled={line.quantity === 0}><Minus size={17} /></button><input aria-label={`Aantal ${item.name} ${group.short}`} type="number" inputMode="numeric" min="0" max="20000" value={line.quantity} onChange={e => { const v = Number(e.target.value); if (Number.isInteger(v) && v >= 0 && v <= 20000) setLine(item.id, { quantity: v }) }} /><button aria-label={`${item.name} ${group.short} toevoegen`} onClick={() => setLine(item.id, { quantity: Math.min(20000, line.quantity + 1) })}><Plus size={17} /></button></div></div>
+            {item.group === 'windows-outside' && <div className="window-difficulty"><p className="micro">Moeilijkheid verdelen · totaal {line.quantity} ramen. Nieuwe ramen tellen als normaal.</p><div className="difficulty-grid">{difficultyOptions.map((label, i) => <NumberField key={label} label={label} ariaLabel={`${label} — ${item.name}`} value={counts[i]} decimals={0} max={i === 0 ? 20000 - counts.slice(1).reduce((sum, n) => sum + n, 0) : counts[0] + counts[i]} onChange={v => setLine(item.id, assignWindowDifficulty(line, i, v ?? 0, draft.difficulty))} hint={`+${settings.difficultyBps[i] / 100}%${i === 0 ? ' · past totaal aan' : ''}`} />)}</div></div>}
             <details className="line-options"><summary>Aangepaste prijs, tijd of opmerking <ChevronDown size={13} /></summary><div className="form-grid"><NumberField label={`Eigen stukprijs ${item.name}`} value={line.overridePriceCents} nullable onChange={v => setLine(item.id, { overridePriceCents: v })} suffix="€" hint="Leeg = standaardtarief" /><NumberField label={`Eigen werktijd ${item.name}`} value={line.overrideMinutes} decimals={0} max={100000} nullable onChange={v => setLine(item.id, { overrideMinutes: v })} suffix="min" hint="Leeg = standaardtijd" /><div className="span-2"><Field label={`Opmerking ${item.name}`}><input value={line.note} onChange={e => setLine(item.id, { note: e.target.value })} /></Field></div></div></details>
           </div>
         })}</div>)}
@@ -63,7 +71,7 @@ export function Calculator({ draft, settings, customers, editingNumber, onChange
       <details className="card section" open><summary><span className="section-icon"><SlidersHorizontal size={19} /></span><div><h2>Aanpassingen</h2><p>Werkhoogte, frequentie en bijkomende kosten.</p></div><ChevronDown className="chevron" size={18} /></summary><div className="section-body">
         <p className="micro">Bedragen hieronder zijn exclusief btw. Ook de handmatige eindprijs is exclusief btw.</p>
         <div className="form-grid">
-          <Field label="Moeilijkheidsgraad"><select value={draft.difficulty} onChange={e => set('difficulty', Number(e.target.value))}>{difficultyOptions.map((s, i) => <option key={s} value={i}>{s} · {settings.difficultyBps[i] / 100}%</option>)}</select></Field>
+          <Field label="Moeilijkheidsgraad overige diensten" hint="Ramen gebruiken hun eigen verdeling. Voor oudere ramen zonder verdeling geldt deze keuze totdat je ze aanpast."><select value={draft.difficulty} onChange={e => set('difficulty', Number(e.target.value))}>{difficultyOptions.map((s, i) => <option key={s} value={i}>{s} · {settings.difficultyBps[i] / 100}%</option>)}</select></Field>
           <Field label="Bereikbaarheid"><select value={draft.access} onChange={e => set('access', Number(e.target.value))}>{accessOptions.map((s, i) => <option key={s} value={i}>{s} · {settings.accessBps[i] / 100}%</option>)}</select></Field>
           <div className="span-2"><Field label="Frequentie"><select value={draft.frequency} onChange={e => set('frequency', Number(e.target.value))}>{frequencyOptions.map((s, i) => <option key={s} value={i}>{s} · {settings.frequencyBps[i] / 100}% korting</option>)}</select></Field></div>
           <Field label="Extra korting"><select value={draft.discountType} onChange={e => onChange({ ...draft, discountType: e.target.value as Draft['discountType'], discountValue: 0, manualConfirmed: false })}><option value="percent">Percentage</option><option value="fixed">Vast bedrag</option></select></Field>

@@ -3,7 +3,7 @@ import type { Calculation } from '../domain/calculate'
 import { duration, money, percent } from '../domain/money'
 import type { Settings } from '../domain/models'
 export function PriceSummary({ result: r, settings }: { result: Calculation; settings: Settings }) {
-  const rows: [string, number][] = [['Stukprijzen arbeid', r.baseCents], ['Ramen binnen & buiten (+75%)', r.windowSupplementCents], ['Toeslagen (' + percent(r.surchargeBps) + ')', r.surchargeCents], ['Frequentiekorting', -r.frequencyDiscountCents], ['Extra korting', -r.extraDiscountCents], ['Uurlooncorrectie', r.hourlyCorrectionCents], ['Arbeid na correctie', r.laborCents], ['Materiaal voor klant', r.materialCents], ['Verplaatsing', r.travelCents], ['Minimumprijsaanpassing', r.minimumCorrectionCents]]
+  const rows: [string, number][] = [['Stukprijzen arbeid', r.baseCents], ['Ramen binnen & buiten (+75%)', r.windowSupplementCents], ['Moeilijkheid ramen', r.windowDifficultyCents], ['Overige moeilijkheid en bereikbaarheid', r.surchargeCents - r.windowDifficultyCents], ['Frequentiekorting', -r.frequencyDiscountCents], ['Extra korting', -r.extraDiscountCents], ['Uurlooncorrectie', r.hourlyCorrectionCents], ['Arbeid na correctie', r.laborCents], ['Materiaal voor klant', r.materialCents], ['Verplaatsing', r.travelCents], ['Minimumprijsaanpassing', r.minimumCorrectionCents]]
   return <>
     <div className="summary-stats"><span><Layers size={17} />{r.quantity} onderdelen</span><span><Clock3 size={17} />{duration(r.totalMinutes)}</span></div>
     <dl className="price-rows">{rows.map(([label, value]) => <div key={label} className={label.includes('correctie') && value > 0 ? 'highlight' : ''}><dt>{label}</dt><dd>{money(value)}</dd></div>)}</dl>

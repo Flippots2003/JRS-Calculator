@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { frequencyOptions, groups } from '../domain/catalog'
+import { difficultyOptions, frequencyOptions, groups } from '../domain/catalog'
 import { calculationSchema, type Quote } from '../domain/models'
 import { customerAddress, hasCustomerDetails } from '../domain/customers'
 import { duration, money, percent, roundRatio } from '../domain/money'
@@ -58,10 +58,10 @@ export function generatePdf(quote: Quote) {
     const lines = r.lines.filter(l => l.group === group.id)
     if (!lines.length) continue
     body.push([{ content: group.id === 'windows-outside' && r.calculationVersion === 2 ? 'Ramen — buitenbasis' : group.name, colSpan: 4, styles: { fillColor: [237, 244, 240], textColor: green, fontStyle: 'bold' } }])
-    for (const line of lines) { const amount = net(line.totalCents); invoiceSum += amount; body.push([line.name + (line.note ? '\n' + line.note : ''), String(line.quantity), money(net(line.unitCents!)), money(amount)]) }
+    for (const line of lines) { const amount = net(line.totalCents); invoiceSum += amount; body.push([line.name + (line.difficultyCounts ? '\n' + line.difficultyCounts.map((n, i) => n ? `${n} ${difficultyOptions[i].toLowerCase()}` : '').filter(Boolean).join(', ') : '') + (line.note ? '\n' + line.note : ''), String(line.quantity), money(net(line.unitCents!)), money(amount)]) }
     body.push(['Subtotaal ' + group.short.toLowerCase(), '', '', money(lines.reduce((s, l) => s + net(l.totalCents), 0))])
   }
-  const adjustments: [string, number][] = [['Ramen binnen & buiten (+75%)', r.windowSupplementCents], ['Toeslagen (' + percent(r.surchargeBps) + ')', r.surchargeCents], ['Frequentiekorting', -r.frequencyDiscountCents], ['Extra korting', -r.extraDiscountCents], ['Uurlooncorrectie', r.hourlyCorrectionCents], ['Materiaalkosten', r.materialCents], ['Verplaatsingskosten', r.travelCents], ['Minimumprijsaanpassing', r.minimumCorrectionCents], ['Handmatige prijsaanpassing', (r.calculationVersion === 2 ? r.exclusiveCents : r.totalCents) - r.automaticTotalCents]]
+  const adjustments: [string, number][] = [['Ramen binnen & buiten (+75%)', r.windowSupplementCents], ['Moeilijkheid ramen', r.windowDifficultyCents], ['Overige moeilijkheid en bereikbaarheid', r.surchargeCents - r.windowDifficultyCents], ['Frequentiekorting', -r.frequencyDiscountCents], ['Extra korting', -r.extraDiscountCents], ['Uurlooncorrectie', r.hourlyCorrectionCents], ['Materiaalkosten', r.materialCents], ['Verplaatsingskosten', r.travelCents], ['Minimumprijsaanpassing', r.minimumCorrectionCents], ['Handmatige prijsaanpassing', (r.calculationVersion === 2 ? r.exclusiveCents : r.totalCents) - r.automaticTotalCents]]
   for (const [label, amount] of adjustments) if (amount) { const value = net(amount); invoiceSum += value; body.push([label, '', '', money(value)]) }
   if (invoiceSum !== r.exclusiveCents) body.push(['Afrondingsverschil', '', '', money(r.exclusiveCents - invoiceSum)])
   autoTable(doc, { startY: y, head: [['Dienst / aanpassing (excl. btw)', 'Aantal', 'Per stuk', 'Bedrag']], body,
