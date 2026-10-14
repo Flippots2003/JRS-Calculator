@@ -277,3 +277,14 @@ input[type=checkbox] { appearance: auto; width: 18px; height: 18px; min-height: 
 .difficulty-grid .field { min-width: 0; }
 .difficulty-grid .field > span:first-child { font-size: 12px; }
 @media (min-width: 1100px) { .difficulty-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.services-section .section-header { padding-bottom: 14px; }
+.services-section .service-picker { margin-bottom: 14px; }
+.services-section .service-group-title { padding-bottom: 6px; }
+.services-section .service-line { padding: 10px 0; }
+.service-details > summary { display: flex; align-items: center; gap: 5px; width: fit-content; max-width: 100%; min-height: 28px; margin-top: 2px; color: var(--muted); font-size: 11px; list-style: none; }
+.service-details > summary::-webkit-details-marker { display: none; }
+.service-details[open] > summary svg { transform: rotate(180deg); }
+.service-details .window-difficulty { margin-top: 6px; padding-top: 8px; border-top: 0; }
+.service-details .window-difficulty > p { margin-bottom: 8px; }
+.service-details .line-options .form-grid { margin: 12px 0 4px; }

@@ -228,7 +228,7 @@ test('alle diensten hebben werkende regelprijzen en vereisen controle op dubbelt
     const input = page.getByLabel(`Aantal ${name} ${group}`, { exact: true })
     const row = input.locator('xpath=ancestor::div[contains(@class,"service-line")]')
     await input.fill(quantity)
-    await row.getByText('Aangepaste prijs, tijd of opmerking').click()
+    await row.locator('.service-details > summary').click()
     await row.getByLabel(`Eigen stukprijs ${name}`, { exact: true }).fill(price)
     await row.getByLabel(`Eigen werktijd ${name}`, { exact: true }).fill(minutes)
   }
@@ -280,6 +280,8 @@ test('iPhone-installatiehulp toont Safari en Zet op beginscherm', async ({ brows
 
 test('moeilijkheid per raamsoort bewaart de telling, toeslag, concept en PDF-verdeling', async ({ page }) => {
   await page.getByLabel('Aantal Normaal raam Ramen', { exact: true }).fill('5')
+  await expect(page.getByLabel('Gemiddeld — Normaal raam', { exact: true })).toBeHidden()
+  await page.getByLabel('Details Normaal raam Ramen', { exact: true }).click()
   await page.getByLabel('Gemiddeld — Normaal raam', { exact: true }).fill('1')
   await page.getByLabel('Moeilijk — Normaal raam', { exact: true }).fill('1')
   await expect(page.getByLabel('Normaal — Normaal raam', { exact: true })).toHaveValue('3')
@@ -290,6 +292,8 @@ test('moeilijkheid per raamsoort bewaart de telling, toeslag, concept en PDF-ver
   await expect(page.locator('.price-bar strong')).toHaveText(/52,46/)
   await expect(page.getByText('Concept bewaard', { exact: true })).toBeVisible()
   await page.reload()
+  await expect(page.getByLabel('Details Normaal raam Ramen', { exact: true })).toContainText('3 normaal · 1 gemiddeld · 1 moeilijk')
+  await page.getByLabel('Details Normaal raam Ramen', { exact: true }).click()
   await expect(page.getByLabel('Gemiddeld — Normaal raam', { exact: true })).toHaveValue('1')
   await expect(page.getByLabel('Moeilijk — Normaal raam', { exact: true })).toHaveValue('1')
   await page.getByLabel('Aantal Normaal raam Ramen', { exact: true }).fill('7')
@@ -304,6 +308,8 @@ test('moeilijkheid per raamsoort bewaart de telling, toeslag, concept en PDF-ver
   expect(pdfText).toContain('3 normaal, 1 gemiddeld, 1 moeilijk')
   expect(pdfText).toContain('Moeilijkheid ramen'); expect(pdfText).toContain('€ 52,46')
   await page.getByRole('button', { name: /JRS-.* bewerken/ }).click()
+  const details = page.locator('.service-line').filter({ has: page.getByLabel('Aantal Normaal raam Ramen', { exact: true }) }).locator('.service-details')
+  if (!(await details.evaluate(el => (el as HTMLDetailsElement).open))) await page.getByLabel('Details Normaal raam Ramen', { exact: true }).click()
   await expect(page.getByLabel('Normaal — Normaal raam', { exact: true })).toHaveValue('3')
   await expect(page.getByLabel('Moeilijk — Normaal raam', { exact: true })).toHaveValue('1')
   await navigate(page, 'Instellingen'); await page.getByRole('tab', { name: 'Back-up & app' }).click()
