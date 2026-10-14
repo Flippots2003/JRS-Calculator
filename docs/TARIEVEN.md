@@ -10,15 +10,15 @@ JRS gebruikt daarom een arbeidsnorm van **€55/u excl. btw** en een minimumopdr
 
 De gekozen stukprijzen bieden ruimte boven de arbeidsnorm. Een te lage stukprijs wordt op basis van de geschatte tijd automatisch verhoogd tot de ingestelde uurgrens. Dat beschermt alleen als de tijdsinschatting klopt; het garandeert geen winst. Vervoer, niet-factureerbare tijd, verzekering, materiaal en bijdragen vragen eveneens dekking.
 
-De tweede tariefversie verlaagt alle stukprijzen ongeveer 8–13% en verkort de richttijden. Een groot raam krijgt op basis van JRS’ eigen werksnelheid maximaal 4 minuten voor de buitenzijde (7 minuten voor binnen en buiten). Andere tijden blijven startschattingen. De arbeidsnorm, minimumopdracht en voorbereiding blijven behouden. Bij bestaande installaties worden alleen ongewijzigde standaardprijzen en standaardtijden aangepast; eigen afwijkingen en opgeslagen offertes blijven behouden.
+De tweede tariefversie verlaagt alle stukprijzen ongeveer 8–13% en verkort de richttijden. De vierde tariefversie gebruikt JRS’ eigen werksnelheid: 1 minuut voor een klein raam, 2 minuten voor een normaal raam en maximaal 3 minuten voor een groot raam, telkens normaal bereikbaar en enkel buiten. De stukprijzen blijven bij deze tijdsaanpassing gelijk. Andere tijden blijven startschattingen. De arbeidsnorm, minimumopdracht en voorbereiding blijven behouden. Bij bestaande installaties worden alleen ongewijzigde standaardprijzen en standaardtijden aangepast; eigen afwijkingen en opgeslagen offertes blijven behouden.
 
 ## Ramen: één telling, buitenbasis
 
 | Volledig raam, inclusief kader | Stukprijs buiten | Geschatte minuten buiten |
 |---|---:|---:|
-| Klein raam | €3,50 | 2 |
-| Normaal raam | €5,50 | 3 |
-| Groot raam | €7,50 | 4 |
+| Klein raam | €3,50 | 1 |
+| Normaal raam | €5,50 | 2 |
+| Groot raam | €7,50 | 3 |
 | Schuifraam | €9,50 | 6 |
 | Dakraam | €10,50 | 6 |
 
@@ -28,7 +28,7 @@ Een minimumopdracht kan de toeslag bij een heel kleine opdracht absorberen. De a
 
 ## Moeilijkheid per raamsoort
 
-De derde tariefversie verlaagt een groot raam naar €7,50 en een schuifraam naar €9,50 exclusief btw. Onder elke raamsoort kun je het totaal verdelen over normaal, gemiddeld, moeilijk en zeer moeilijk. De standaardtoeslagen zijn respectievelijk 0%, 15%, 30% en 50%, aanpasbaar bij Instellingen. De geschatte tijd stijgt met dezelfde verhouding voor alleen de betrokken ramen; een normaal groot raam blijft 4 minuten buiten.
+De derde tariefversie verlaagt een groot raam naar €7,50 en een schuifraam naar €9,50 exclusief btw. Onder elke raamsoort kun je het totaal verdelen over normaal, gemiddeld, moeilijk en zeer moeilijk. De standaardtoeslagen zijn respectievelijk 0%, 15%, 30% en 50%, aanpasbaar bij Instellingen. De geschatte tijd stijgt met dezelfde verhouding voor alleen de betrokken ramen; een normaal groot raam duurt maximaal 3 minuten buiten.
 
 Bij 5 normale formaatramen, verdeeld als 3 normaal, 1 gemiddeld en 1 moeilijk, is de buitenbasis 5 × €5,50 = €27,50. De moeilijkheidstoeslag bedraagt €2,48. Bij binnen en buiten geldt +75% ook op deze raamtoeslag. Minimumopdracht en uurgrens kunnen de uiteindelijke prijs verder verhogen.
 

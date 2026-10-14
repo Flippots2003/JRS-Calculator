@@ -15,7 +15,7 @@ export const customerSchema = z.object({
 })
 export const rateSchema = z.object({ priceCents: centsSchema.nullable(), minutes: minutesSchema.nullable() })
 export const settingsSchema = z.object({
-  tariffRevision: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
+  tariffRevision: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).default(1),
   pricingVersion: z.union([z.literal(1), z.literal(2)]).default(1),
   company: z.object({
     name: text, address: text, phone: text, email: z.union([z.literal(''), z.email()]),
@@ -115,7 +115,7 @@ export function legacyDefaultSettings(): Settings {
 }
 
 export function defaultSettings(): Settings {
-  return { ...legacyDefaultSettings(), pricingVersion: 2, tariffRevision: 3, priceBasis: 'exclusive',
+  return { ...legacyDefaultSettings(), pricingVersion: 2, tariffRevision: 4, priceBasis: 'exclusive',
     rates: structuredClone(standardRates), difficultyBps: [0, 1500, 3000, 5000], minimumHourlyCents: 5500,
     minimumOrderCents: 4000, preparationMinutes: 10,
   }

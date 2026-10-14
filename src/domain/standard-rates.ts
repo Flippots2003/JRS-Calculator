@@ -36,3 +36,10 @@ for (const [i, priceCents] of [[2, 750], [3, 950]]) {
   standardRates[`windows-outside-${i}`].priceCents = priceCents
   standardRates[`windows-both-${i}`].priceCents = Math.round(priceCents * 175 / 100)
 }
+
+export const revisionThreeRates = structuredClone(standardRates)
+// Revision 4: JRS measured speed for ordinary windows, outside only.
+for (const [i, minutes] of [[0, 1], [1, 2], [2, 3]]) {
+  standardRates[`windows-outside-${i}`].minutes = minutes
+  standardRates[`windows-both-${i}`].minutes = Math.round(minutes * 175 / 100)
+}
