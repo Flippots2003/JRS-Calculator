@@ -17,3 +17,8 @@ export const catalog = [
 export const difficultyOptions = ['Normaal', 'Gemiddeld', 'Moeilijk', 'Zeer moeilijk']
 export const accessOptions = ['Gelijkvloers / eenvoudig', 'Eerste verdieping', 'Tweede verdieping', 'Moeilijk bereikbaar']
 export const frequencyOptions = ['Eenmalig', 'Maandelijks', 'Om de twee maanden', 'Per kwartaal', 'Halfjaarlijks', 'Jaarlijks']
+
+// Old group identities stay available for historical quotes and backups.
+export const currentGroups = groups.filter(g => g.id !== 'windows-both').map(g => g.id === 'windows-outside'
+  ? { ...g, name: 'Ramen', short: 'Ramen', description: 'Tel elk volledig raam één keer. Kies de reiniging onderaan bij de totalen.' }
+  : g)

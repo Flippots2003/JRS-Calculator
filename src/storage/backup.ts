@@ -4,13 +4,13 @@ import { db, loadSettings, loadWorkspace, type JrsDatabase } from './database'
 
 export async function createBackup(database = db): Promise<Backup> {
   return database.transaction('r', database.meta, database.customers, database.quotes, async () => ({
-    app: 'JRS Offertecalculator', schemaVersion: 1, exportedAt: new Date().toISOString(),
-    settings: await loadSettings(database), customers: await database.customers.toArray(),
+    app: 'JRS Offertecalculator', schemaVersion: 2, exportedAt: new Date().toISOString(),
+    settings: settingsSchema.parse((await database.meta.get('settings'))?.value ?? await loadSettings(database)), customers: await database.customers.toArray(),
     quotes: await database.quotes.toArray(), workspace: await loadWorkspace(database),
   }))
 }
 export function validateBackup(raw: unknown): Backup {
-  if (raw && typeof raw === 'object' && 'schemaVersion' in raw && raw.schemaVersion !== 1) throw new Error('Deze dataschemaversie wordt nog niet ondersteund. Importeer het bestand in een geschikte appversie.')
+  if (raw && typeof raw === 'object' && 'schemaVersion' in raw && ![1, 2].includes(Number(raw.schemaVersion))) throw new Error('Deze dataschemaversie wordt nog niet ondersteund. Importeer het bestand in een geschikte appversie.')
   const parsed = backupSchema.safeParse(raw)
   if (!parsed.success) throw new Error('Ongeldige back-up: ' + parsed.error.issues[0].message)
   for (const q of parsed.data.quotes) {
@@ -47,6 +47,6 @@ export async function readJson(file: File) {
   try { return JSON.parse(await file.text()) as unknown } catch { throw new Error('Dit bestand bevat geen geldige JSON.') }
 }
 export function validatePriceList(raw: unknown) {
-  if (!raw || typeof raw !== 'object' || !('app' in raw) || raw.app !== 'JRS Prijslijst' || !('schemaVersion' in raw) || raw.schemaVersion !== 1 || !('settings' in raw)) throw new Error('Dit is geen ondersteunde JRS-prijslijst.')
+  if (!raw || typeof raw !== 'object' || !('app' in raw) || raw.app !== 'JRS Prijslijst' || !('schemaVersion' in raw) || ![1, 2].includes(Number(raw.schemaVersion)) || !('settings' in raw)) throw new Error('Dit is geen ondersteunde JRS-prijslijst.')
   return settingsSchema.parse(raw.settings)
 }

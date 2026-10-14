@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { calculate } from './calculate'
-import { defaultSettings, emptyDraft } from './models'
+import { legacyDefaultSettings as defaultSettings, emptyDraft } from './models'
 import { parseDecimal, roundRatio } from './money'
 
 function fixture(price = 500, minutes = 1, quantity = 10) {

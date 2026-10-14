@@ -1,3 +1,4 @@
+import { upgradeSettings, upgradeDraft } from '../domain/upgrade'
 import Dexie, { type Table } from 'dexie'
 import { hasCustomerDetails } from '../domain/customers'
 import { calculate, saveErrors } from '../domain/calculate'
@@ -16,7 +17,10 @@ export class JrsDatabase extends Dexie {
 export const db = new JrsDatabase()
 export async function loadSettings(database = db): Promise<Settings> {
   const entry = await database.meta.get('settings')
-  return entry ? settingsSchema.parse(entry.value) : defaultSettings()
+  const stored = entry ? settingsSchema.parse(entry.value) : defaultSettings()
+  const settings = upgradeSettings(stored)
+  if (stored.pricingVersion !== 2) await database.meta.put({ key: 'settings', value: settings })
+  return settings
 }
 export async function saveSettings(settings: Settings, database = db) {
   await database.meta.put({ key: 'settings', value: settingsSchema.parse(settings) })
@@ -30,7 +34,8 @@ export async function loadWorkspace(database = db): Promise<Workspace | null> {
   const row = await database.meta.get('workspace')
   if (!row) return null
   const data = row.value as Workspace
-  return { draft: draftSchema.parse(data.draft), settings: settingsSchema.parse(data.settings), editingId: data.editingId }
+  const oldSettings = settingsSchema.parse(data.settings)
+  return { draft: upgradeDraft(draftSchema.parse(data.draft), oldSettings), settings: upgradeSettings(oldSettings), editingId: data.editingId }
 }
 export async function saveWorkspace(workspace: Workspace, database = db) {
   await database.meta.put({ key: 'workspace', value: structuredClone(workspace) })

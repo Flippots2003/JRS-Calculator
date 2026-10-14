@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { catalog } from './catalog'
+import { standardRates } from './standard-rates'
 
 // Money is always stored as integer cents; percentages as basis points.
 export const centsSchema = z.number().int().min(0).max(100_000_000)
@@ -14,6 +15,7 @@ export const customerSchema = z.object({
 })
 export const rateSchema = z.object({ priceCents: centsSchema.nullable(), minutes: minutesSchema.nullable() })
 export const settingsSchema = z.object({
+  pricingVersion: z.union([z.literal(1), z.literal(2)]).default(1),
   company: z.object({
     name: text, address: text, phone: text, email: z.union([z.literal(''), z.email()]),
     enterpriseNumber: text, vatNumber: text, website: text, logo: z.string().max(3_000_000).refine(s => s === '' || /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(s), 'Het logo moet een lokaal PNG- of JPEG-bestand zijn.'),
@@ -26,13 +28,14 @@ export const settingsSchema = z.object({
   difficultyBps: z.array(percentSchema).length(4), accessBps: z.array(percentSchema).length(4),
   frequencyBps: z.array(percentSchema).length(6),
   travel: z.object({ origin: text, freeRadiusDeciKm: z.number().int().min(0).max(100_000), perKmCents: centsSchema, returnTrip: z.boolean() }),
-})
+}).refine(s => s.pricingVersion !== 2 || s.priceBasis === 'exclusive', 'De huidige prijslijst moet exclusief btw zijn.')
 export const lineSchema = z.object({
   id: z.string().refine(id => catalog.some(c => c.id === id), 'Onbekende dienst.'),
-  quantity: z.number().int().min(0).max(10_000),
+  quantity: z.number().int().min(0).max(20_000),
   overridePriceCents: centsSchema.nullable(), overrideMinutes: minutesSchema.nullable(), note: text,
 })
 export const draftSchema = z.object({
+  windowCleaning: z.enum(['outside', 'both']).default('outside'),
   customer: customerSchema, lines: z.array(lineSchema).length(catalog.length).refine(lines => new Set(lines.map(l => l.id)).size === lines.length, 'Dubbele diensten.'),
   difficulty: z.number().int().min(0).max(3), access: z.number().int().min(0).max(3),
   frequency: z.number().int().min(0).max(5), discountType: z.enum(['percent', 'fixed']), discountValue: centsSchema,
@@ -49,7 +52,8 @@ export type Draft = z.infer<typeof draftSchema>
 export const statuses = ['Concept', 'Verzonden', 'Goedgekeurd', 'Afgewezen'] as const
 const computedNumber = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
 export const calculationSchema = z.object({
-  calculationVersion: z.literal(1),
+  calculationVersion: z.union([z.literal(1), z.literal(2)]),
+  windowSupplementCents: computedNumber.default(0),
   lines: z.array(lineSchema.extend({ name: text, group: z.enum(['windows-both', 'windows-outside', 'shutters', 'garages', 'conservatories']), unitCents: computedNumber.nullable(), totalCents: computedNumber, minutes: computedNumber })),
   issues: z.array(text), baseCents: computedNumber, totalMinutes: computedNumber, surchargeBps: computedNumber,
   surchargeCents: computedNumber, frequencyDiscountCents: computedNumber, extraDiscountCents: computedNumber,
@@ -72,7 +76,7 @@ export const quoteSchema = quoteVersionSchema.extend({
 export type QuoteVersion = z.infer<typeof quoteVersionSchema>
 export type Quote = z.infer<typeof quoteSchema>
 export const backupSchema = z.object({
-  app: z.literal('JRS Offertecalculator'), schemaVersion: z.literal(1), exportedAt: z.string().datetime(),
+  app: z.literal('JRS Offertecalculator'), schemaVersion: z.union([z.literal(1), z.literal(2)]), exportedAt: z.string().datetime(),
   settings: settingsSchema, customers: z.array(customerSchema), quotes: z.array(quoteSchema),
   workspace: z.object({ draft: draftSchema, settings: settingsSchema, editingId: z.string().nullable() }).nullable().optional(),
 }).superRefine((data, ctx) => {
@@ -87,15 +91,23 @@ export function emptyCustomer(): Customer {
   return { id: '', name: '', contact: '', street: '', postcode: '', city: '', phone: '', email: '', vatNumber: '', type: 'private', notes: '', separateAddress: false, executionAddress: '' }
 }
 export function emptyDraft(): Draft {
-  return { customer: emptyCustomer(), lines: catalog.map(c => ({ id: c.id, quantity: 0, overridePriceCents: null, overrideMinutes: null, note: '' })), difficulty: 0, access: 0, frequency: 0, discountType: 'percent', discountValue: 0, internalMaterialCents: 0, materialCents: 0, distanceDeciKm: 0, travelOverrideCents: null, manualTotalCents: null, manualConfirmed: false, overlapConfirmed: false, vatConfirmed: false, notes: '' }
+  return { windowCleaning: 'outside', customer: emptyCustomer(), lines: catalog.map(c => ({ id: c.id, quantity: 0, overridePriceCents: null, overrideMinutes: null, note: '' })), difficulty: 0, access: 0, frequency: 0, discountType: 'percent', discountValue: 0, internalMaterialCents: 0, materialCents: 0, distanceDeciKm: 0, travelOverrideCents: null, manualTotalCents: null, manualConfirmed: false, overlapConfirmed: false, vatConfirmed: false, notes: '' }
 }
-export function defaultSettings(): Settings {
+export function legacyDefaultSettings(): Settings {
   return {
+    pricingVersion: 1,
     company: { name: "Jarne's Ramenservice", address: '', phone: '', email: '', enterpriseNumber: '', vatNumber: '', website: '', logo: '', quoteText: '', terms: '', payment: '', validityDays: 30 },
     rates: Object.fromEntries(catalog.map(c => [c.id, { priceCents: null, minutes: null }])),
     priceBasis: 'inclusive', vatBps: 2100, vatRegime: 'normal', vatExplanation: '',
     minimumHourlyCents: 4500, minimumOrderCents: 3500, preparationMinutes: 0,
     difficultyBps: [0, 0, 0, 0], accessBps: [0, 0, 0, 0], frequencyBps: [0, 0, 0, 0, 0, 0],
     travel: { origin: '', freeRadiusDeciKm: 0, perKmCents: 0, returnTrip: true },
+  }
+}
+
+export function defaultSettings(): Settings {
+  return { ...legacyDefaultSettings(), pricingVersion: 2, priceBasis: 'exclusive',
+    rates: structuredClone(standardRates), minimumHourlyCents: 5500,
+    minimumOrderCents: 4000, preparationMinutes: 10,
   }
 }

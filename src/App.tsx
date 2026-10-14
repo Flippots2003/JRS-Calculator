@@ -1,21 +1,20 @@
-import { customerLabel } from './domain/customers'
+import { upgradeSettings, upgradeDraft } from './domain/upgrade'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Calculator as CalculatorIcon, Check, CheckCircle2, CloudOff, FileText, Settings as SettingsIcon, ShieldCheck, UsersRound, WifiOff, X } from 'lucide-react'
+import { Calculator as CalculatorIcon, Check, CheckCircle2, CloudOff, FileText, Settings as SettingsIcon, ShieldCheck, WifiOff, X } from 'lucide-react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { calculate, saveErrors } from './domain/calculate'
 import { defaultSettings, emptyDraft, type Customer, type Draft, type Quote, type Settings } from './domain/models'
 import { db, loadSettings, loadWorkspace, saveCustomer, saveQuote, saveSettings, saveWorkspace, today } from './storage/database'
 import { createBackup, downloadFile, downloadJson, readJson, restoreBackup, validateBackup, validatePriceList } from './storage/backup'
 import { Calculator } from './pages/Calculator'
-import { CustomersPage } from './pages/Customers'
 import { QuotesPage } from './pages/Quotes'
 import { SettingsPage } from './pages/Settings'
 import { Notice } from './components/Fields'
 import { PdfPreview } from './components/PdfPreview'
 import { InstallHelp } from './offline/InstallHelp'
 
-type Tab = 'calculator' | 'customers' | 'quotes' | 'settings'
-const navigation = [{ id: 'calculator', label: 'Calculator', icon: CalculatorIcon }, { id: 'customers', label: 'Klanten', icon: UsersRound }, { id: 'quotes', label: 'Offertes', icon: FileText }, { id: 'settings', label: 'Instellingen', icon: SettingsIcon }] as const
+type Tab = 'calculator'  | 'quotes' | 'settings'
+const navigation = [{ id: 'calculator', label: 'Calculator', icon: CalculatorIcon }, { id: 'quotes', label: 'Offertes', icon: FileText }, { id: 'settings', label: 'Instellingen', icon: SettingsIcon }] as const
 export default function App() {
   const [tab, setTab] = useState<Tab>('calculator')
   const [settings, setSettings] = useState(defaultSettings)
@@ -67,17 +66,13 @@ export default function App() {
     const original = editingId ? quotes.find(q => q.id === editingId)?.draft : emptyDraft()
     const hasInput = JSON.stringify(draft) !== JSON.stringify(original)
     if (hasInput && !window.confirm('Je huidige invoer vervangen? Sla ze eerst op als je ze wilt behouden.')) return false
-    setDraft(structuredClone(next)); setQuoteSettings(structuredClone(snapshot)); setEditingId(id); navigate('calculator'); window.scrollTo(0, 0); return true
+    if (id && snapshot.pricingVersion !== 2 && !window.confirm('Deze historische offerte wordt bij bewerken omgerekend naar exclusieve prijzen en de nieuwe raamtelling met 75%-keuze. De originele versie blijft bewaard. Controleer de nieuwe prijs vóór opslaan. Doorgaan?')) return false
+    setDraft(upgradeDraft(next, snapshot)); setQuoteSettings(upgradeSettings(snapshot, false)); setEditingId(id); navigate('calculator'); window.scrollTo(0, 0); return true
   }
   function reset(customer?: Customer) { const next = emptyDraft(); if (customer) next.customer = structuredClone(customer); replaceDraft(next, settings, null) }
   async function save() {
     if (editingId && !window.confirm('De opgeslagen offerte bijwerken? De huidige opgeslagen versie blijft in de versiegeschiedenis bewaard.')) return
     await run(async () => { const q = await saveQuote(draft, quoteSettings, editingId); setDraft(q.draft); setEditingId(q.id); setQuotes((await db.quotes.toArray()).sort((a, b) => b.savedAt.localeCompare(a.savedAt))); setCustomers(await db.customers.toArray()); notify(`Offerte ${q.number} opgeslagen.`) })
-  }
-  async function customerSave(customer: Customer) {
-    let success = false
-    await run(async () => { await saveCustomer(customer); setCustomers(await db.customers.toArray()); notify('Klantgegevens opgeslagen.'); success = true })
-    return success
   }
   async function calculatorCustomerSave() { await run(async () => { const c = await saveCustomer(draft.customer); setDraft(v => ({ ...v, customer: c })); setCustomers(await db.customers.toArray()); notify('Klantgegevens opgeslagen.') }) }
   async function updateSettings(next: Settings) {
@@ -94,10 +89,9 @@ export default function App() {
     void displayPdf({ id: editingId ?? 'preview', number: old?.number ?? 'JRS-CONCEPT', status: old?.status ?? 'Concept', date, validUntil: old?.validUntil ?? until, savedAt: new Date().toISOString(), draft, settings: quoteSettings, result: calculate(draft, quoteSettings), revisions: [] })
   }
   async function deleteQuote(q: Quote) { if (!window.confirm(`${q.number} en alle vorige versies definitief verwijderen?`)) return; await run(async () => { await db.quotes.delete(q.id); setQuotes(await db.quotes.toArray()); if (editingId === q.id) { setDraft(emptyDraft()); setQuoteSettings(settings); setEditingId(null) }; notify('Offerte verwijderd.') }) }
-  async function deleteCustomer(c: Customer) { if (!window.confirm(`${customerLabel(c)} uit je klantenlijst verwijderen? De klantgegevens in bestaande offertes blijven behouden.`)) return; await run(async () => { await db.customers.delete(c.id); setCustomers(await db.customers.toArray()); if (draft.customer.id === c.id) setDraft(v => ({ ...v, customer: { ...v.customer, id: '' } })); notify('Klant verwijderd.') }) }
   async function exportBackup() { await run(async () => { await saveWorkspace({ draft, settings: quoteSettings, editingId }); const backup = await createBackup(); downloadJson(backup, `JRS-Backup-${today()}.json`); const at = new Date().toISOString(); await db.meta.put({ key: 'lastBackup', value: at }); setLastBackup(at); notify('Back-up geëxporteerd. Controleer of het bestand veilig is bewaard.') }) }
   async function importBackup(file: File) { await run(async () => { const backup = validateBackup(await readJson(file)); if (!window.confirm(`Deze back-up bevat ${backup.customers.length} klanten en ${backup.quotes.length} offertes. Alle huidige gegevens worden vervangen, ook je concept. Maak eerst een back-up. Herstellen?`)) return; await restoreBackup(backup); await reload(); setSettingsDirty(false); notify('Back-up volledig hersteld.') }) }
-  async function importRates(file: File) { await run(async () => { const imported = validatePriceList(await readJson(file)); if (!window.confirm('Alle huidige tarieven en prijsregels vervangen? De bedrijfsgegevens en opgeslagen offertes blijven behouden.')) return; const next = { ...imported, company: settings.company }; await saveSettings(next); setSettings(next); if (!editingId) { setQuoteSettings(next); setDraft(v => ({ ...v, vatConfirmed: false, manualConfirmed: false })) }; setSettingsDirty(false); notify('Prijslijst geïmporteerd.') }) }
+  async function importRates(file: File) { await run(async () => { const imported = validatePriceList(await readJson(file)); if (!window.confirm('Alle huidige tarieven en prijsregels vervangen? De bedrijfsgegevens en opgeslagen offertes blijven behouden.')) return; const next = upgradeSettings({ ...imported, company: settings.company }); await saveSettings(next); setSettings(next); if (!editingId) { setQuoteSettings(next); setDraft(v => ({ ...v, vatConfirmed: false, manualConfirmed: false })) }; setSettingsDirty(false); notify('Prijslijst geïmporteerd.') }) }
   async function requestPersistence() { try { const allowed = await navigator.storage?.persist?.(); setPersistent(Boolean(allowed)); notify(allowed ? 'Persistente opslag toegestaan.' : 'De browser heeft persistente opslag niet toegestaan. Bewaar regelmatig een back-up.') } catch (e) { report(e) } }
   if (initError) return <main className="loading"><h1>Lokale opslag niet beschikbaar</h1><Notice tone="warning">{initError}</Notice><p>Gebruik een gewone Chrome-tab met toegestane siteopslag. Wis geen gegevens als je nog geen back-up hebt.</p><button className="button primary" onClick={() => location.reload()}>Opnieuw proberen</button></main>
   if (!loaded) return <main className="loading"><span className="brand-mark">JRS</span><p>Je gegevens worden geopend…</p></main>
@@ -111,9 +105,8 @@ export default function App() {
       {needRefresh && <Notice>Een nieuwe appversie is beschikbaar. Je gegevens blijven behouden.<button className="text-button" onClick={() => void run(async () => { if (settingsDirty) { notify('Sla eerst je instellingen op.', true); return }; await saveWorkspace({ draft, settings: quoteSettings, editingId }); await updateServiceWorker(true) })}>Update installeren</button></Notice>}
       {help && <InstallHelp />}
       {tab === 'calculator' && <Calculator key={editingId ?? 'new'} draft={draft} settings={quoteSettings} customers={customers} editingNumber={editingNumber} onChange={setDraft} onSave={() => void save()} onSaveCustomer={() => void calculatorCustomerSave()} onReset={() => reset()} onSettings={() => navigate('settings')} onPdf={previewCurrent} onRefreshRates={() => { if (window.confirm('Alle standaardtarieven en prijsregels voor deze offerte vervangen door je huidige instellingen? Afwijkende regelprijzen blijven behouden.')) { setQuoteSettings(structuredClone(settings)); setDraft(v => ({ ...v, manualConfirmed: false, vatConfirmed: false })) } }} busy={busy} />}
-      {tab === 'customers' && <CustomersPage customers={customers} quotes={quotes} onSave={customerSave} onDelete={c => void deleteCustomer(c)} onQuote={reset} onOpenQuote={q => replaceDraft(q.draft, q.settings, q.id)} busy={busy} />}
       {tab === 'quotes' && <QuotesPage quotes={quotes} onNew={() => reset()} onEdit={q => replaceDraft(q.draft, q.settings, q.id)} onDuplicate={q => replaceDraft(q.draft, q.settings, null)} onDelete={q => void deleteQuote(q)} onPdf={(q, preview) => void displayPdf(q, Boolean(preview))} onStatus={(q, status) => void run(async () => { await db.quotes.update(q.id, { status }); setQuotes(await db.quotes.toArray()); notify('Status bijgewerkt.') })} onRevision={(q, index) => void displayPdf({ ...q, ...q.revisions[index] })} />}
-      {tab === 'settings' && <SettingsPage settings={settings} onSave={updateSettings} onDirty={setSettingsDirty} onExportBackup={() => void exportBackup()} onImportBackup={f => void importBackup(f)} onExportRates={() => downloadJson({ app: 'JRS Prijslijst', schemaVersion: 1, settings: { ...settings, company: defaultSettings().company } }, `JRS-Prijslijst-${today()}.json`)} onImportRates={f => void importRates(f)} lastBackup={lastBackup} persistent={persistent} requestPersistence={() => void requestPersistence()} busy={busy} />}
+      {tab === 'settings' && <SettingsPage settings={settings} onSave={updateSettings} onDirty={setSettingsDirty} onExportBackup={() => void exportBackup()} onImportBackup={f => void importBackup(f)} onExportRates={() => downloadJson({ app: 'JRS Prijslijst', schemaVersion: 2, settings: { ...settings, company: defaultSettings().company } }, `JRS-Prijslijst-${today()}.json`)} onImportRates={f => void importRates(f)} lastBackup={lastBackup} persistent={persistent} requestPersistence={() => void requestPersistence()} busy={busy} />}
       <footer className="app-footer"><ShieldCheck size={14} />Geen account. Geen cloud. Jouw gegevens op jouw toestel.</footer>
     </main>
     {toast && <div className={`toast ${toast.error ? 'error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <WifiOff size={19} /> : <CheckCircle2 size={19} />}<span>{toast.text}</span><button aria-label="Melding sluiten" onClick={() => setToast(null)}><X size={17} /></button></div>}

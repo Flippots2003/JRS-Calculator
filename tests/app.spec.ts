@@ -1,12 +1,14 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
+import { legacyDefaultSettings, emptyDraft } from '../src/domain/models'
+import { calculate } from '../src/domain/calculate'
 
 async function navigate(page: Page, name: string) { await page.getByRole('navigation').getByRole('button', { name, exact: true }).click() }
 async function setRate(page: Page, price: string, minutes = '1') {
   await navigate(page, 'Instellingen')
-  await page.getByLabel('Prijs Normaal raam Binnen & buiten', { exact: true }).fill(price)
-  await page.getByLabel('Werktijd Normaal raam Binnen & buiten', { exact: true }).fill(minutes)
+  await page.getByLabel('Prijs Normaal raam Ramen', { exact: true }).fill(price)
+  await page.getByLabel('Werktijd Normaal raam Ramen', { exact: true }).fill(minutes)
   await page.getByRole('button', { name: 'Instellingen opslaan', exact: true }).click()
   await expect(page.getByText('Alles is opgeslagen', { exact: true })).toBeVisible()
   await navigate(page, 'Calculator')
@@ -14,7 +16,7 @@ async function setRate(page: Page, price: string, minutes = '1') {
 async function fillQuote(page: Page, quantity = '10') {
   await page.getByLabel('Naam', { exact: true }).fill('José Vermeulen')
   await page.getByLabel('Adres', { exact: true }).fill('Teststraat 12\n9000 Gent')
-  await page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true }).fill(quantity)
+  await page.getByLabel('Aantal Normaal raam Ramen', { exact: true }).fill(quantity)
 }
 async function save(page: Page) {
   await page.getByRole('button', { name: 'Offerte opslaan', exact: true }).click()
@@ -29,7 +31,7 @@ test('vier optionele klantvelden; offerte en PDF werken zonder klantgegevens', a
   await expect(page.getByLabel('Type klant', { exact: true })).toHaveCount(0)
   await expect(page.locator('input[required], textarea[required]')).toHaveCount(0)
   await setRate(page, '5')
-  await page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true }).fill('10')
+  await page.getByLabel('Aantal Normaal raam Ramen', { exact: true }).fill('10')
   await save(page)
   await navigate(page, 'Offertes')
   await expect(page.getByRole('heading', { name: 'Zonder klantgegevens' })).toBeVisible()
@@ -38,17 +40,64 @@ test('vier optionele klantvelden; offerte en PDF werken zonder klantgegevens', a
   const download = await downloadPromise
   const pdfText = execFileSync('pdftotext', [(await download.path())!, '-'], { encoding: 'utf8' })
   expect(pdfText).toContain('€ 50,00')
-  await navigate(page, 'Klanten')
-  await expect(page.getByRole('heading', { name: 'Je eerste klant begint hier' })).toBeVisible()
+  await navigate(page, 'Calculator')
+  await expect(page.getByLabel('Bestaande klant selecteren')).toHaveCount(0)
 })
 test.beforeEach(async ({ page }) => {
   page.on('dialog', dialog => dialog.accept())
   await page.goto('./')
   await expect(page.getByRole('heading', { name: 'Nieuwe offerte', exact: true })).toBeVisible()
 })
-test('geen fictieve bedrijfsprijzen; onvolledige offertes worden geblokkeerd', async ({ page }) => {
-  await page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true }).fill('1')
-  await expect(page.getByText('Nog onvolledig', { exact: true })).toBeVisible()
+test('één raamtelling met 75% bij de totalen en exclusieve PDF-prijzen', async ({ page }) => {
+  await expect(page.getByRole('navigation').getByRole('button')).toHaveCount(3)
+  await expect(page.getByRole('button', { name: 'Binnen & buiten', exact: true })).toHaveCount(0)
+  await page.getByLabel('Aantal Normaal raam Ramen', { exact: true }).fill('10')
+  await expect(page.locator('.price-bar strong')).toHaveText(/60,00/)
+  await page.getByLabel('Reiniging van de ramen', { exact: true }).selectOption('both')
+  await expect(page.locator('.price-bar strong')).toHaveText(/105,00/)
+  await expect(page.getByLabel('Aantal Normaal raam Ramen', { exact: true })).toHaveValue('10')
+  await expect(page.locator('.price-bar small')).toHaveText('Totaal exclusief btw')
+  await page.getByRole('button', { name: 'Rolluiken', exact: true }).click()
+  await page.getByLabel('Aantal Standaard rolluik Rolluiken', { exact: true }).fill('1')
+  await expect(page.locator('.price-bar strong')).toHaveText(/125,00/)
+  await save(page)
+  await page.reload()
+  await expect(page.getByLabel('Reiniging van de ramen')).toHaveValue('both')
+  await navigate(page, 'Offertes')
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: /PDF JRS-.* downloaden/ }).click()
+  const download = await downloadPromise
+  const pdfText = execFileSync('pdftotext', [(await download.path())!, '-'], { encoding: 'utf8' })
+  expect(pdfText).toContain('excl. btw'); expect(pdfText).toContain('€ 125,00')
+  expect(pdfText).toContain('€ 151,25'); expect(pdfText).toContain('75%')
+})
+test('oude inclusieve offerte blijft bewaard; nieuwe regels worden alleen na bevestiging opgeslagen', async ({ page }) => {
+  const settings = legacyDefaultSettings(); const draft = emptyDraft()
+  settings.rates['windows-both-1'] = { priceCents: 500, minutes: 1 }; draft.lines[1].quantity = 10
+  const quote = { id: 'historical', number: 'JRS-2026-0001', status: 'Concept', date: '2026-10-01', validUntil: '2026-10-31', savedAt: '2026-10-01T12:00:00.000Z', draft, settings, result: calculate(draft, settings), revisions: [] }
+  // Original exports did not have these new version/choice fields.
+  const backup = JSON.parse(JSON.stringify({ app: 'JRS Offertecalculator', schemaVersion: 1, exportedAt: '2026-10-01T12:00:00.000Z', settings, customers: [], quotes: [quote] }))
+  delete backup.settings.pricingVersion; delete backup.quotes[0].settings.pricingVersion
+  delete backup.quotes[0].draft.windowCleaning; delete backup.quotes[0].result.windowSupplementCents
+  await navigate(page, 'Instellingen'); await page.getByRole('tab', { name: 'Back-up & app' }).click()
+  await page.locator('input[type=file]').setInputFiles({ name: 'historisch.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) })
+  await expect(page.getByRole('status')).toContainText('Back-up volledig hersteld.')
+  await navigate(page, 'Offertes'); await expect(page.locator('.quote-amount')).toContainText('41,32')
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: /PDF JRS-.* downloaden/ }).click()
+  const download = await downloadPromise
+  const text = execFileSync('pdftotext', [(await download.path())!, '-'], { encoding: 'utf8' })
+  expect(text).toContain('€ 41,32'); expect(text).toContain('€ 50,00')
+  await page.getByRole('button', { name: 'JRS-2026-0001 bewerken', exact: true }).click()
+  await expect(page.getByLabel('Aantal Normaal raam Ramen')).toHaveValue('10')
+  await expect(page.getByLabel('Reiniging van de ramen')).toHaveValue('both')
+  await expect(page.locator('.price-bar strong')).toHaveText(/105,00/)
+  await save(page); await navigate(page, 'Offertes')
+  await expect(page.getByText('1 eerdere versie bewaard')).toBeVisible()
+})
+test('prijslijst is ingevuld; offertes zonder diensten worden geblokkeerd', async ({ page }) => {
+  await expect(page.getByText('Ingevulde richtprijzen, excl. btw', { exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation').getByRole('button', { name: 'Klanten', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Offerte opslaan' }).click()
   await expect(page.getByText('Deze offerte kan nog niet opgeslagen worden')).toBeVisible()
   await navigate(page, 'Offertes')
@@ -60,7 +109,7 @@ test('live bedragen, concept na herstart, historische tarieven en leesbare PDF',
   await expect(page.locator('.price-bar strong')).toHaveText(/50,00/)
   await expect(page.getByText('Concept bewaard', { exact: true })).toBeVisible()
   await page.reload()
-  await expect(page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true })).toHaveValue('10')
+  await expect(page.getByLabel('Aantal Normaal raam Ramen', { exact: true })).toHaveValue('10')
   await save(page)
   await setRate(page, '8')
   await navigate(page, 'Offertes')
@@ -74,23 +123,23 @@ test('live bedragen, concept na herstart, historische tarieven en leesbare PDF',
   expect(download.suggestedFilename()).toMatch(/^JRS-Offerte-\d{4}-\d{4}\.pdf$/)
   const bytes = await readFile(path!); expect(bytes.subarray(0, 4).toString()).toBe('%PDF')
   const pdfText = execFileSync('pdftotext', [path!, '-'], { encoding: 'utf8' })
-  expect(pdfText).toContain('José Vermeulen'); expect(pdfText).toContain('€ 50,00'); expect(pdfText).toContain('Ramen binnen & buiten')
+  expect(pdfText).toContain('José Vermeulen'); expect(pdfText).toContain('€ 50,00'); expect(pdfText).toContain('Ramen')
 })
 test('uurnorm, materiaalkosten en bewuste handmatige afwijking', async ({ page }) => {
   await setRate(page, '5', '12'); await fillQuote(page)
-  await expect(page.locator('.price-bar strong')).toHaveText(/90,00/)
+  await expect(page.locator('.price-bar strong')).toHaveText(/119,17/)
   await page.getByLabel('Interne materiaalkost', { exact: true }).fill('100')
-  await expect(page.locator('.price-bar strong')).toHaveText(/90,00/)
+  await expect(page.locator('.price-bar strong')).toHaveText(/119,17/)
   await page.getByLabel('Materiaal voor klant', { exact: true }).fill('20')
-  await expect(page.locator('.price-bar strong')).toHaveText(/110,00/)
+  await expect(page.locator('.price-bar strong')).toHaveText(/139,17/)
   await page.getByText('Eindprijs handmatig aanpassen', { exact: false }).click()
-  await page.getByLabel('Handmatige eindprijs inclusief btw').fill('30')
+  await page.getByLabel('Handmatige eindprijs exclusief btw').fill('30')
   await expect(page.getByText('De eindprijs ligt onder de minimale opdrachtprijs.')).toBeVisible()
   await page.getByRole('button', { name: 'Offerte opslaan' }).click()
   await expect(page.getByText('Deze offerte kan nog niet opgeslagen worden')).toBeVisible()
   await page.getByLabel('Ik aanvaard deze afwijking bewust.').check()
   await save(page)
-  await page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true }).fill('20')
+  await page.getByLabel('Aantal Normaal raam Ramen', { exact: true }).fill('20')
   await expect(page.locator('.price-bar strong')).toHaveText(/30,00/)
   await expect(page.getByLabel('Ik aanvaard deze afwijking bewust.')).not.toBeChecked()
 })
@@ -103,9 +152,8 @@ test('PWA start offline; klanten, tarieven, offertes en PDF werken zonder netwer
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Nieuwe offerte', exact: true })).toBeVisible()
   await setRate(page, '5'); await fillQuote(page); await save(page)
-  await navigate(page, 'Klanten')
-  await page.getByLabel('Klanten zoeken').fill('Gent')
-  await expect(page.getByRole('heading', { name: 'José Vermeulen' })).toBeVisible()
+  await navigate(page, 'Calculator')
+  await expect(page.getByLabel('Bestaande klant selecteren').locator('option')).toContainText(['Nieuwe klant', 'José Vermeulen'])
   await navigate(page, 'Offertes')
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: /PDF JRS-.* downloaden/ }).click()
@@ -127,7 +175,7 @@ test('JSON-back-up herstelt gegevens; foutieve bestanden laten opslag intact', a
   await p.locator('input[type=file]').setInputFiles(path)
   await expect(p.getByRole('status')).toContainText('Back-up volledig hersteld.')
   await navigate(p, 'Offertes'); await expect(p.locator('.quote-amount')).toHaveText(/50,00/)
-  await navigate(p, 'Klanten'); await expect(p.getByRole('heading', { name: 'José Vermeulen' })).toBeVisible()
+  await navigate(p, 'Calculator'); await expect(p.getByLabel('Bestaande klant selecteren').locator('option')).toContainText(['Nieuwe klant', 'José Vermeulen'])
   await navigate(p, 'Instellingen'); await p.getByRole('tab', { name: 'Back-up & app' }).click()
   await p.locator('input[type=file]').setInputFiles({ name: 'fout.json', mimeType: 'application/json', buffer: Buffer.from('{"schemaVersion":99}') })
   await expect(p.getByRole('alert')).toContainText('dataschemaversie')
@@ -135,17 +183,17 @@ test('JSON-back-up herstelt gegevens; foutieve bestanden laten opslag intact', a
   await fresh.close()
 })
 test('klant zonder offerte, alle dienstcategorieën, dupliceren en vorige versies', async ({ page }) => {
-  await navigate(page, 'Klanten'); await page.getByRole('button', { name: 'Nieuwe klant' }).click()
+  await navigate(page, 'Calculator')
   await page.getByLabel('Naam').fill('Losse klant')
-  await page.getByRole('button', { name: 'Klant opslaan', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Losse klant' })).toBeVisible()
+  await page.getByRole('button', { name: 'Klant afzonderlijk opslaan', exact: true }).click()
+  await expect(page.getByLabel('Bestaande klant selecteren').locator('option')).toContainText(['Nieuwe klant', 'Losse klant'])
   await navigate(page, 'Calculator'); await setRate(page, '5'); await fillQuote(page)
-  for (const name of ['Enkel buiten', 'Rolluiken', 'Garagepoorten', 'Veranda’s']) await page.getByRole('button', { name, exact: true }).click()
+  for (const name of ['Rolluiken', 'Garagepoorten', 'Veranda’s']) await page.getByRole('button', { name, exact: true }).click()
   await expect(page.getByLabel('Aantal Groot rolluik Rolluiken')).toBeVisible()
   await expect(page.getByLabel('Aantal Brede garagepoort Garagepoorten')).toBeVisible()
   await expect(page.getByLabel('Aantal Glazen tuinhuis — groot Veranda’s')).toBeVisible()
   await save(page)
-  await page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true }).fill('12'); await save(page)
+  await page.getByLabel('Aantal Normaal raam Ramen', { exact: true }).fill('12'); await save(page)
   await navigate(page, 'Offertes')
   await expect(page.getByText('1 eerdere versie bewaard')).toBeVisible()
   await page.getByRole('button', { name: /JRS-.* dupliceren/ }).click(); await save(page)
@@ -171,9 +219,8 @@ test('mobiele layout blijft binnen het scherm; manifest en app-iconen aanwezig',
 })
 test('alle diensten hebben werkende regelprijzen en vereisen controle op dubbeltelling', async ({ page }) => {
   await setRate(page, '5'); await fillQuote(page)
-  for (const name of ['Enkel buiten', 'Rolluiken', 'Garagepoorten', 'Veranda’s']) await page.getByRole('button', { name, exact: true }).click()
+  for (const name of ['Rolluiken', 'Garagepoorten', 'Veranda’s']) await page.getByRole('button', { name, exact: true }).click()
   for (const [name, group, quantity, price, minutes] of [
-    ['Normaal raam', 'Enkel buiten', '1', '8', '3'],
     ['Standaard rolluik', 'Rolluiken', '2', '10', '4'],
     ['Standaard garagepoort', 'Garagepoorten', '1', '30', '8'],
     ['Veranda — klein', 'Veranda’s', '1', '50', '10'],
@@ -185,7 +232,7 @@ test('alle diensten hebben werkende regelprijzen en vereisen controle op dubbelt
     await row.getByLabel(`Eigen stukprijs ${name}`, { exact: true }).fill(price)
     await row.getByLabel(`Eigen werktijd ${name}`, { exact: true }).fill(minutes)
   }
-  await expect(page.locator('.price-bar strong')).toHaveText(/158,00/)
+  await expect(page.locator('.price-bar strong')).toHaveText(/150,00/)
   await page.getByRole('button', { name: 'Offerte opslaan' }).click()
   await expect(page.getByText('Deze offerte kan nog niet opgeslagen worden')).toBeVisible()
   await page.getByLabel('Ik bevestig dat dit verschillende onderdelen zijn.').check()
@@ -195,7 +242,7 @@ test('alle diensten hebben werkende regelprijzen en vereisen controle op dubbelt
   await page.getByRole('button', { name: /PDF JRS-.* downloaden/ }).click()
   const download = await downloadPromise
   const pdfText = execFileSync('pdftotext', [(await download.path())!, '-'], { encoding: 'utf8' })
-  for (const title of ['Rolluiken', 'Garagepoorten', 'Veranda', '€ 158,00']) expect(pdfText).toContain(title)
+  for (const title of ['Rolluiken', 'Garagepoorten', 'Veranda', '€ 150,00']) expect(pdfText).toContain(title)
 })
 test('installatiehulp bewaart het browseraanbod en respecteert het iPhone-platform', async ({ page }, testInfo) => {
   await page.evaluate(() => {

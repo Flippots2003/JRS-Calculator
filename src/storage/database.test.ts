@@ -1,8 +1,9 @@
+import { upgradeSettings } from '../domain/upgrade'
 import 'fake-indexeddb/auto'
 import { afterEach, describe, expect, it } from 'vitest'
 import { JrsDatabase, saveQuote, saveSettings, loadSettings, saveCustomer } from './database'
 import { createBackup, restoreBackup, validateBackup } from './backup'
-import { defaultSettings, emptyDraft } from '../domain/models'
+import { legacyDefaultSettings as defaultSettings, emptyDraft } from '../domain/models'
 import { calculate } from '../domain/calculate'
 const databases: JrsDatabase[] = []
 function database() { const d = new JrsDatabase(crypto.randomUUID()); databases.push(d); return d }
@@ -34,13 +35,13 @@ describe('Lokale opslag en herstel', () => {
     await saveSettings(settings, source); const q = await saveQuote(draft, settings, null, source)
     const backup = await createBackup(source); await restoreBackup(JSON.parse(JSON.stringify(backup)), target)
     expect(await target.customers.count()).toBe(1); expect((await target.quotes.get(q.id))?.result.totalCents).toBe(5000)
-    expect(await loadSettings(target)).toEqual(settings)
+    expect(await loadSettings(target)).toEqual(upgradeSettings(settings))
     const next = await saveQuote(draft, settings, null, target); expect(next.number).not.toBe(q.number)
   })
   it('weigert kapotte, toekomstige en gemanipuleerde back-ups vóór overschrijven', async () => {
     const d = database(); const { draft, settings } = fixture(); await saveQuote(draft, settings, null, d)
     const backup = await createBackup(d)
-    expect(() => validateBackup({ ...backup, schemaVersion: 2 })).toThrow('dataschemaversie')
+    expect(() => validateBackup({ ...backup, schemaVersion: 99 })).toThrow('dataschemaversie')
     backup.quotes[0].result.totalCents = 1
     await expect(restoreBackup(backup, d)).rejects.toThrow('berekening')
     expect(await d.quotes.count()).toBe(1)

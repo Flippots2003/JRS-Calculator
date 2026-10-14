@@ -5,12 +5,15 @@ Een Nederlandstalige, mobiele offertecalculator voor Jarne's Ramenservice. Insta
 ## Gebouwd in vier fases
 
 1. **Fundament:** React, TypeScript, Vite, gegevensmodellen, centrale berekeningen met gehele centen en rekentests.
-2. **Dagelijks gebruik:** één scrollbare calculator, vijf dienstcategorieën, instelbare tarieven, klantenbeheer, offertebeheer, conceptopslag en historische versies.
+2. **Dagelijks gebruik:** één scrollbare calculator, één raamtelling met een 75%-keuze, instelbare tarieven, optionele klantgegevens in de offerte, offertebeheer, conceptopslag en historische versies.
 3. **Documenten en offline:** lokale A4-PDF's, Android-deelmenu waar ondersteund, gevalideerde JSON-back-ups, prijslijstimport, service worker en PWA-manifest.
 4. **Oplevering:** productiebuild, mobiele browsertests, controles van PDF-inhoud en offlineherstart, deze handleiding en herbruikbare cloudinstructies.
 
-Er worden **geen voorbeeldklanten of verzonnen bedrijfsprijzen** in de database gezet. Alleen €45 inclusief btw per arbeidsuur, €35 inclusief btw per opdracht en 21% btw staan vooraf ingesteld. Toeslagen en frequentiekortingen beginnen op 0%. Stukprijzen en werktijden blijven leeg totdat de eigenaar ze configureert. Ook een bewust ingesteld nultarief is mogelijk.
+De app heeft drie tabs: **Calculator**, **Offertes** en **Instellingen**. Klantgegevens zijn alleen optioneel onderdeel van een offerte; er is geen klantentab. Er worden geen voorbeeldklanten in de database gezet.
 
+Alle nieuwe invoer, prijzen en hoofdtotalen zijn **exclusief btw**. Btw wordt afzonderlijk getoond en het inclusief totaal blijft als extra informatie zichtbaar. De ingevulde standaardrichtprijzen gebruiken een arbeidsnorm van **€55/u excl. btw**, een minimumopdracht van **€40 excl. btw** en tien minuten voorbereiding. [Tarieven, bron en afleiding](docs/TARIEVEN.md) legt de online uurprijsindicatie, gekozen stukprijzen en geschatte minuten uit. Die afgeleide stukprijzen zijn geen letterlijk overgenomen concurrententarieven en geen garantie op winst.
+
+Tel ieder raam één keer. Kies onderaan bij de totalen **Enkel buiten** of **Binnen & buiten (+75%)**. De 75% geldt alleen op de buitenbasis van de ramen; hun geschatte werktijd stijgt eveneens met 75%.
 De groene kleuren en het JRS-teksticoon zijn tijdelijke, neutrale vormgeving, geen nieuw bedrijfslogo. Kleuren staan als CSS-variabelen en tokens in `src/styles.css`; het echte logo kan via Instellingen worden geüpload.
 
 ## Ontwikkelen en testen
@@ -54,24 +57,24 @@ De previewserver is uitsluitend voor lokale validatie. Een HTTP-adres op een and
 
 ## Eerste gebruik
 
-1. Open **Instellingen → Tarieven**. Vul de prijzen en gemiddelde minuten in voor de diensten die je gebruikt. Andere diensten mogen ongeconfigureerd blijven; een offerte met zulke diensten wordt geblokkeerd.
+1. Open **Instellingen → Tarieven**. De richtprijzen en geschatte minuten zijn ingevuld; controleer ze en pas uitzonderlijke werkzaamheden aan. Een ontbrekend tarief of ontbrekende werktijd blokkeert offerteopslag.
 2. Controleer **Prijsregels**: uurtarief, minimumopdracht, voorbereidingstijd, toeslagen, onderhoudskortingen, gratis kilometerstraal en kilometervergoeding. Afstand is steeds de handmatig ingevoerde enkele rit.
 3. Vul onder **Bedrijf** je adres, contactgegevens, ondernemingsnummer, btw-nummer, echte logo, standaardtekst, voorwaarden en betalingsinformatie in. Ontbrekende bedrijfsgegevens worden op de PDF als nog aan te vullen aangeduid.
 4. Maak een offerte: voeg aantallen toe en controleer de live totaalprijs. Naam, adres, telefoonnummer en btw-nummer zijn allemaal optioneel. Sla een klant eventueel afzonderlijk op.
-5. Sla de offerte op. Open **Offertes** om de PDF te bekijken, downloaden, dupliceren, bewerken of de status te wijzigen.
+5. Kies bij de totalen de raamreiniging: enkel buiten of binnen en buiten (+75%). Sla de offerte op. Open **Offertes** om de PDF te bekijken, downloaden, dupliceren, bewerken of de status te wijzigen.
 6. Maak een eerste back-up via **Instellingen → Back-up & app**.
 
 ## Berekening
 
 Alle bedragen worden als gehele centen bewaard. Percentages gebruiken basispunten (100 basispunten = 1%). Vermenigvuldigingen en afrondingen gebruiken `BigInt`-verhoudingen: afronding op de dichtstbijzijnde cent, halve centen naar boven.
 
-De volgorde is: stukprijzen → opgetelde arbeidstoeslagen → frequentiekorting → extra arbeidskorting → minimumarbeidsvergoeding → materiaal voor klant en verplaatsing → resterende minimumopdrachtcorrectie. Er wordt geen dubbele minimumcorrectie toegepast. Een vast kortingsbedrag wordt begrensd op de beschikbare arbeid. Interne materiaalkosten worden nooit automatisch doorgerekend.
+De volgorde is: stukprijzen → 75% raamtoeslag bij binnen/buiten → opgetelde arbeidstoeslagen → frequentiekorting → extra arbeidskorting → minimumarbeidsvergoeding → materiaal voor klant en verplaatsing → resterende minimumopdrachtcorrectie. Er wordt geen dubbele minimumcorrectie toegepast. Een vaste korting wordt begrensd op de beschikbare arbeid. Interne materiaalkosten worden nooit automatisch doorgerekend.
 
-De arbeidsuurnorm en minimumopdracht zijn altijd **inclusief btw**, ook wanneer stukprijzen exclusief worden ingevoerd. Bij exclusieve invoer worden arbeidsregels en klantkosten naar inclusief omgerekend. De PDF toont arbeidsregels en aanpassingen inclusief btw; het netto totaal en btw-bedrag worden afzonderlijk weergegeven. Bij exclusieve invoer kan de afgeronde bruto eenheidsprijs een cent verschil geven tegenover het bruto regeltotaal, omdat de volledige regel wordt omgerekend.
+In versie 2 zijn de arbeidsuurnorm, minimumopdracht, stukprijzen, kortingen, kosten en handmatige eindprijs allemaal exclusief btw. Alleen na het net totaal wordt btw eenmaal toegevoegd. De PDF toont exclusieve regelprijzen en maakt btw apart zichtbaar. Een handmatige eindprijs blijft behouden bij herberekening; onder de minimumgrenzen is expliciete bevestiging nodig. Wijzigingen in aantallen, kosten of de raamkeuze maken die bevestiging opnieuw noodzakelijk.
 
-Een handmatige eindprijs is altijd inclusief btw. Ze blijft behouden bij herberekening. Bij prijzen onder de minimumgrenzen is expliciete bevestiging nodig; gewijzigde aantallen of kosten maken die bevestiging opnieuw noodzakelijk. Een afwijkend btw-regime moet per offerte worden bevestigd. Ramenwas krijgt nooit automatisch 6% op grond van de ouderdom van een gebouw.
+Historische versie-1-offertes behouden hun originele inclusieve rekenmethode en opgeslagen eindbedrag. Nieuwe concepten en instellingen worden naar exclusief omgezet. Voor het bewerken van een historische offerte verschijnt een bevestiging van de nieuwe regels; opslaan bewaart de oorspronkelijke versie. [TARIEVEN.md](docs/TARIEVEN.md) beschrijft de omzetting. Een PDF van een oude offerte toont equivalent exclusieve bedragen met behoud van het oude inclusief totaal.
 
-De app kan niet herkennen welke fysieke ramen hetzelfde zijn. Wanneer ramen binnen/buiten én enkel buiten voor hetzelfde type geselecteerd zijn, of ramen samen met een veranda/tuinhuis, verschijnt een waarschuwing en is een bevestiging nodig dat de onderdelen elkaar niet overlappen.
+Een afwijkend btw-regime moet per offerte worden bevestigd. Ramenwas krijgt nooit automatisch 6% op grond van de ouderdom van een gebouw. De app kan niet herkennen welke fysieke ramen hetzelfde zijn: ramen samen met een veranda/tuinhuis vereisen bevestiging dat glaspartijen niet dubbel worden geteld.
 
 ## Lokale gegevens en historische offertes
 
@@ -85,7 +88,7 @@ Gegevens horen bij het browserprofiel én de website-oorsprong. Een andere domei
 
 ## Back-up en prijslijsten
 
-Een JSON-back-up bevat klanten, offertes, eerdere versies, instellingen, tarieven en het huidige werkconcept. Dataschemaversie 1 wordt ondersteund. Onbekende toekomstige versies worden met uitleg geweigerd; velden, dubbele nummers, bedragen en opgeslagen berekeningen worden gevalideerd voordat er gegevens worden vervangen. Het herstel gebeurt in één IndexedDB-transactie, na een bevestiging.
+Een JSON-back-up bevat klanten, offertes, eerdere versies, instellingen, tarieven en het huidige werkconcept. Back-upversies 1 en 2 worden ondersteund. Nieuwe exports gebruiken versie 2; oude offertes worden met hun eigen berekeningsversie gevalideerd. Onbekende toekomstige versies worden met uitleg geweigerd; velden, dubbele nummers, bedragen en opgeslagen berekeningen worden gevalideerd voordat er gegevens worden vervangen. Het herstel gebeurt in één IndexedDB-transactie, na een bevestiging.
 
 Een prijslijstbestand bevat tarieven en prijsregels, zonder klanten en offertes. Bij import blijven bedrijfsgegevens en historische offertes behouden. Sla wijzigingen op voordat je exporteert. Per tarief kun je niet-opgeslagen invoer terugzetten naar de laatst opgeslagen waarde.
 
@@ -141,7 +144,7 @@ De cloudomgeving publiceren via omgevingsinstellingen bewaart de ontwikkelomgevi
 4. Open de app en wacht op **Offline beschikbaar**. Alle nodige bestanden, inclusief de PDF-module, worden vooraf gecachet.
 5. Herstart in vliegtuigmodus en maak een testofferte. Controleer de PDF-download en herstel van een back-up op je eigen toestel.
 
-PDF-delen verschijnt alleen als het native deelmenu PDF-bestanden ondersteunt. Sommige mobiele browsers tonen een PDF niet in het ingebouwde voorbeeld; downloaden en openen met een PDF-app is dan de fallback. De fysieke Android-installatie, het native deelmenu en de PDF-viewer zijn nog niet op een echte telefoon geverifieerd.
+PDF-delen verschijnt alleen als het native deelmenu PDF-bestanden ondersteunt. Sommige mobiele browsers tonen een PDF niet in het ingebouwde voorbeeld; downloaden en openen met een PDF-app is dan de fallback. Installatie op een fysieke telefoon, het native deelmenu en de PDF-viewer vereisen daarnaast een toestelcontrole.
 
 ## Installeren op iPhone
 
@@ -155,7 +158,7 @@ Updates tonen een melding in de app en worden bewust geïnstalleerd nadat het co
 src/
   domain/       modellen, dienstencatalogus, centenberekening en tests
   components/   invoervelden, klantformulier, prijsoverzicht, modals, PDF-voorbeeld
-  pages/        calculator, klanten, offertes en instellingen
+  pages/        calculator, offertes en instellingen
   storage/      IndexedDB, historische snapshots, back-upvalidatie en tests
   pdf/          lokale A4-PDF-generatie
   offline/      Android-installatiehulp
