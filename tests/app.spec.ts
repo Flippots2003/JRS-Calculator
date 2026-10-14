@@ -12,16 +12,35 @@ async function setRate(page: Page, price: string, minutes = '1') {
   await navigate(page, 'Calculator')
 }
 async function fillQuote(page: Page, quantity = '10') {
-  await page.getByLabel('Klantnaam / bedrijfsnaam *', { exact: true }).fill('José Vermeulen')
-  await page.getByLabel('Straat en huisnummer *', { exact: true }).fill('Teststraat 12')
-  await page.getByLabel('Postcode *', { exact: true }).fill('9000')
-  await page.getByLabel('Gemeente *', { exact: true }).fill('Gent')
+  await page.getByLabel('Naam', { exact: true }).fill('José Vermeulen')
+  await page.getByLabel('Adres', { exact: true }).fill('Teststraat 12\n9000 Gent')
   await page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true }).fill(quantity)
 }
 async function save(page: Page) {
   await page.getByRole('button', { name: 'Offerte opslaan', exact: true }).click()
   await expect(page.getByRole('status')).toContainText(/Offerte JRS-\d{4}-\d{4} opgeslagen/)
 }
+test('vier optionele klantvelden; offerte en PDF werken zonder klantgegevens', async ({ page }) => {
+  await expect(page.getByLabel('Naam', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Adres', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Telefoonnummer', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Btw-nummer (indien nodig)', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('E-mailadres', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Type klant', { exact: true })).toHaveCount(0)
+  await expect(page.locator('input[required], textarea[required]')).toHaveCount(0)
+  await setRate(page, '5')
+  await page.getByLabel('Aantal Normaal raam Binnen & buiten', { exact: true }).fill('10')
+  await save(page)
+  await navigate(page, 'Offertes')
+  await expect(page.getByRole('heading', { name: 'Zonder klantgegevens' })).toBeVisible()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: /PDF JRS-.* downloaden/ }).click()
+  const download = await downloadPromise
+  const pdfText = execFileSync('pdftotext', [(await download.path())!, '-'], { encoding: 'utf8' })
+  expect(pdfText).toContain('€ 50,00')
+  await navigate(page, 'Klanten')
+  await expect(page.getByRole('heading', { name: 'Je eerste klant begint hier' })).toBeVisible()
+})
 test.beforeEach(async ({ page }) => {
   page.on('dialog', dialog => dialog.accept())
   await page.goto('./')
@@ -117,7 +136,7 @@ test('JSON-back-up herstelt gegevens; foutieve bestanden laten opslag intact', a
 })
 test('klant zonder offerte, alle dienstcategorieën, dupliceren en vorige versies', async ({ page }) => {
   await navigate(page, 'Klanten'); await page.getByRole('button', { name: 'Nieuwe klant' }).click()
-  await page.getByLabel('Klantnaam / bedrijfsnaam *').fill('Losse klant')
+  await page.getByLabel('Naam').fill('Losse klant')
   await page.getByRole('button', { name: 'Klant opslaan', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Losse klant' })).toBeVisible()
   await navigate(page, 'Calculator'); await setRate(page, '5'); await fillQuote(page)

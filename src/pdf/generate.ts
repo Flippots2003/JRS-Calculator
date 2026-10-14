@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { frequencyOptions, groups } from '../domain/catalog'
 import type { Quote } from '../domain/models'
+import { customerAddress, hasCustomerDetails } from '../domain/customers'
 import { duration, money, percent } from '../domain/money'
 
 const date = (value: string) => new Date(value + 'T12:00:00').toLocaleDateString('nl-BE')
@@ -13,7 +14,7 @@ export function generatePdf(quote: Quote) {
   const dark: [number, number, number] = [32, 49, 44]
   const muted: [number, number, number] = [90, 109, 100]
   let y = 20
-  doc.setProperties({ title: `Offerte ${quote.number}`, author: company.name, subject: `Offerte voor ${customer.name}` })
+  doc.setProperties({ title: `Offerte ${quote.number}`, author: company.name, subject: customer.name.trim() ? `Offerte voor ${customer.name}` : 'Offerte' })
   doc.setFillColor(...green); doc.rect(0, 0, 210, 4, 'F')
   let nameX = 18
   if (company.logo) {
@@ -42,9 +43,10 @@ export function generatePdf(quote: Quote) {
       doc.text(line, 18, y); y += size * 0.45 + 1
     }
   }
-  textBlock('VOOR', 9, true); textBlock(customer.name, 13, true)
+  if (hasCustomerDetails(customer)) textBlock('VOOR', 9, true)
+  if (customer.name.trim()) textBlock(customer.name, 13, true)
   if (customer.contact) textBlock(`Ter attentie van ${customer.contact}`)
-  textBlock(`${customer.street}\n${customer.postcode} ${customer.city}`)
+  if (customerAddress(customer).trim()) textBlock(customerAddress(customer))
   if (customer.phone || customer.email) textBlock([customer.phone, customer.email].filter(Boolean).join(' · '))
   if (customer.vatNumber) textBlock(`Btw: ${customer.vatNumber}`)
   if (customer.separateAddress) { y += 3; textBlock('Uitvoeringsadres', 9, true); textBlock(customer.executionAddress) }

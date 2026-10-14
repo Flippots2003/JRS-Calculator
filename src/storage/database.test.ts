@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { afterEach, describe, expect, it } from 'vitest'
-import { JrsDatabase, saveQuote, saveSettings, loadSettings } from './database'
+import { JrsDatabase, saveQuote, saveSettings, loadSettings, saveCustomer } from './database'
 import { createBackup, restoreBackup, validateBackup } from './backup'
 import { defaultSettings, emptyDraft } from '../domain/models'
 import { calculate } from '../domain/calculate'
@@ -46,4 +46,20 @@ describe('Lokale opslag en herstel', () => {
     expect(await d.quotes.count()).toBe(1)
   })
   it('slaat geen incomplete offerte op', async () => { const d = database(); await expect(saveQuote(emptyDraft(), defaultSettings(), null, d)).rejects.toThrow(); expect(await d.quotes.count()).toBe(0) })
+  it('bewaart een offerte zonder klantgegevens en herstelt die zonder lege klanten aan te maken', async () => {
+    const source = database(); const target = database(); const { draft, settings } = fixture()
+    draft.customer = emptyDraft().customer
+    const quote = await saveQuote(draft, settings, null, source)
+    expect(quote.draft.customer.name).toBe('')
+    expect(await source.customers.count()).toBe(0)
+    await restoreBackup(await createBackup(source), target)
+    expect((await target.quotes.get(quote.id))?.result.totalCents).toBe(5000)
+    expect(await target.customers.count()).toBe(0)
+  })
+  it('bewaart klanten met alleen een telefoonnummer of zonder ingevulde velden', async () => {
+    const d = database(); const customer = emptyDraft().customer
+    await saveCustomer({ ...customer, phone: '0123456789' }, d)
+    await saveCustomer(customer, d)
+    expect(await d.customers.count()).toBe(2)
+  })
 })

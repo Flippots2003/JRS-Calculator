@@ -1,7 +1,6 @@
 import { catalog } from './catalog'
 import { draftSchema, settingsSchema, type Draft, type Settings } from './models'
 import { roundRatio } from './money'
-import { z } from 'zod'
 
 export function overlapRisk(draft: Draft) {
   const active = draft.lines.filter(l => l.quantity > 0).map(l => l.id)
@@ -61,10 +60,6 @@ export type Calculation = ReturnType<typeof calculate>
 
 export function saveErrors(draft: Draft, settings: Settings) {
   const errors = [...calculate(draft, settings).issues]
-  if (!draft.customer.name.trim()) errors.push('Vul de klantnaam in.')
   if (settings.vatRegime === 'exempt' && !settings.vatExplanation.trim()) errors.push('Vul de toepasselijke vermelding voor de btw-vrijstelling in bij Instellingen.')
-  if (draft.customer.email && !z.email().safeParse(draft.customer.email).success) errors.push('Vul een geldig e-mailadres in.')
-  if (!draft.customer.street.trim() || !draft.customer.postcode.trim() || !draft.customer.city.trim()) errors.push('Vul het volledige klantadres in.')
-  if (draft.customer.separateAddress && !draft.customer.executionAddress.trim()) errors.push('Vul het uitvoeringsadres in.')
   return errors
 }

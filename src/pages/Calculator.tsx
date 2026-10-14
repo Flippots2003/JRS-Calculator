@@ -1,3 +1,4 @@
+import { customerLabel } from '../domain/customers'
 import { useMemo, useState } from 'react'
 import { ArrowUpRight, ChevronDown, FileText, Minus, Plus, RotateCcw, Save, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react'
 import { accessOptions, catalog, difficultyOptions, frequencyOptions, groups, type GroupId } from '../domain/catalog'
@@ -40,9 +41,9 @@ export function Calculator({ draft, settings, customers, editingNumber, onChange
     {editingNumber && <Notice>Je bewerkt een opgeslagen offerte met haar oorspronkelijke tarieven. Eerdere versies blijven bewaard.<button className="text-button" onClick={onRefreshRates}>Actuele tarieven gebruiken</button></Notice>}
     <div className="calculator-grid"><div className="calculator-input">
       <details className="card section" open><summary><span className="section-icon"><UserRound size={19} /></span><div><h2>Klantgegevens</h2><p>{draft.customer.name || 'Voor wie maken we de offerte?'}</p></div><ChevronDown className="chevron" size={18} /></summary><div className="section-body">
-        {customers.length > 0 && <Field label="Bestaande klant selecteren"><select value={draft.customer.id} onChange={e => { const c = customers.find(c => c.id === e.target.value); if (c) set('customer', structuredClone(c)); else set('customer', { ...draft.customer, id: '' }) }}><option value="">Nieuwe klant</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}{c.city ? ` · ${c.city}` : ''}</option>)}</select></Field>}
+        {customers.length > 0 && <Field label="Bestaande klant selecteren"><select value={draft.customer.id} onChange={e => { const c = customers.find(c => c.id === e.target.value); if (c) set('customer', structuredClone(c)); else set('customer', { ...draft.customer, id: '' }) }}><option value="">Nieuwe klant</option>{customers.map(c => <option key={c.id} value={c.id}>{customerLabel(c)}</option>)}</select></Field>}
         <CustomerForm value={draft.customer} onChange={v => set('customer', v)} />
-        <button className="button secondary" onClick={onSaveCustomer} disabled={!draft.customer.name.trim() || busy}><UserRound size={16} />{draft.customer.id ? 'Klantgegevens bijwerken' : 'Klant afzonderlijk opslaan'}</button>
+        <button className="button secondary" onClick={onSaveCustomer} disabled={busy}><UserRound size={16} />{draft.customer.id ? 'Klantgegevens bijwerken' : 'Klant afzonderlijk opslaan'}</button>
       </div></details>
       <section className="card section"><div className="section-header"><span className="section-icon"><Sparkles size={19} /></span><div><h2>Diensten</h2><p>Tel per volledig onderdeel, inclusief kader.</p></div><span className="badge">{r.quantity} stuks</span></div>
         <div className="section-body"><div className="service-picker">{groups.map(group => <button key={group.id} className={`service-chip ${expanded.has(group.id) ? 'selected' : ''}`} onClick={() => toggleGroup(group.id)} aria-pressed={expanded.has(group.id)}>{expanded.has(group.id) ? <Minus size={15} /> : <Plus size={15} />}{group.short}</button>)}</div>

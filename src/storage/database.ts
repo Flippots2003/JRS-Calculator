@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import { z } from 'zod'
+import { hasCustomerDetails } from '../domain/customers'
 import { calculate, saveErrors } from '../domain/calculate'
 import { defaultSettings, draftSchema, settingsSchema, customerSchema, type Customer, type Draft, type Quote, type QuoteVersion, type Settings } from '../domain/models'
 
@@ -23,8 +23,6 @@ export async function saveSettings(settings: Settings, database = db) {
 }
 export async function saveCustomer(input: Customer, database = db) {
   const customer = customerSchema.parse({ ...input, id: input.id || crypto.randomUUID() })
-  if (!customer.name.trim()) throw new Error('Vul de klantnaam in.')
-  if (customer.email && !z.email().safeParse(customer.email).success) throw new Error('Vul een geldig e-mailadres in.')
   await database.customers.put(customer)
   return customer
 }
@@ -50,7 +48,9 @@ export async function saveQuote(draft: Draft, settings: Settings, editingId: str
   const errors = saveErrors(draft, settings)
   if (errors.length) throw new Error(errors[0])
   return database.transaction('rw', database.quotes, database.customers, database.meta, async () => {
-    const customer = await saveCustomer(draft.customer, database)
+    const customer = draft.customer.id || hasCustomerDetails(draft.customer)
+      ? await saveCustomer(draft.customer, database)
+      : structuredClone(draft.customer)
     const old = editingId ? await database.quotes.get(editingId) : null
     if (editingId && !old) throw new Error('Deze offerte bestaat niet meer. Start een nieuwe offerte.')
     const date = old?.date ?? today()

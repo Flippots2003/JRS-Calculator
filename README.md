@@ -57,7 +57,7 @@ De previewserver is uitsluitend voor lokale validatie. Een HTTP-adres op een and
 1. Open **Instellingen → Tarieven**. Vul de prijzen en gemiddelde minuten in voor de diensten die je gebruikt. Andere diensten mogen ongeconfigureerd blijven; een offerte met zulke diensten wordt geblokkeerd.
 2. Controleer **Prijsregels**: uurtarief, minimumopdracht, voorbereidingstijd, toeslagen, onderhoudskortingen, gratis kilometerstraal en kilometervergoeding. Afstand is steeds de handmatig ingevoerde enkele rit.
 3. Vul onder **Bedrijf** je adres, contactgegevens, ondernemingsnummer, btw-nummer, echte logo, standaardtekst, voorwaarden en betalingsinformatie in. Ontbrekende bedrijfsgegevens worden op de PDF als nog aan te vullen aangeduid.
-4. Maak een offerte: vul naam en adres in, voeg aantallen toe en controleer de live totaalprijs. Sla een klant eventueel afzonderlijk op.
+4. Maak een offerte: voeg aantallen toe en controleer de live totaalprijs. Naam, adres, telefoonnummer en btw-nummer zijn allemaal optioneel. Sla een klant eventueel afzonderlijk op.
 5. Sla de offerte op. Open **Offertes** om de PDF te bekijken, downloaden, dupliceren, bewerken of de status te wijzigen.
 6. Maak een eerste back-up via **Instellingen → Back-up & app**.
 
@@ -75,7 +75,7 @@ De app kan niet herkennen welke fysieke ramen hetzelfde zijn. Wanneer ramen binn
 
 ## Lokale gegevens en historische offertes
 
-De database `jrs-offertecalculator` bevat klanten, offertes en metadata. Conceptinvoer wordt automatisch opgeslagen; **Concept bewaard** verschijnt nadat IndexedDB de opslag bevestigt. Ontbrekende klantgegevens of ongeldige e-mailadressen blokkeren offerteopslag. Klanten mogen afzonderlijk met alleen een naam worden opgeslagen.
+De database `jrs-offertecalculator` bevat klanten, offertes en metadata. Conceptinvoer wordt automatisch opgeslagen; **Concept bewaard** verschijnt nadat IndexedDB de opslag bevestigt. De klantinvoer bevat alleen naam, één adresveld, telefoonnummer en optioneel btw-nummer. Geen enkel klantveld is verplicht: offertes en afzonderlijke klanten kunnen ook zonder ingevulde klantgegevens worden opgeslagen. Offertes zonder klantgegevens maken niet automatisch lege klanten aan. Bestaande klantgegevens en historische offertes blijven behouden.
 
 Offertenummers worden transactioneel toegekend als `JRS-jaar-volgnummer`. Import telt bestaande nummers mee, zodat nieuwe nummers niet conflicteren. Verwijderen geeft oude nummers in dezelfde database niet opnieuw vrij.
 
