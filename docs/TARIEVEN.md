@@ -12,15 +12,19 @@ De gekozen stukprijzen bieden ruimte boven de arbeidsnorm. Een te lage stukprijs
 
 De tweede tariefversie verlaagt alle stukprijzen ongeveer 8–13% en verkort de richttijden. De vierde tariefversie gebruikt JRS’ eigen werksnelheid: 1 minuut voor een klein raam, 2 minuten voor een normaal raam en maximaal 3 minuten voor een groot raam, telkens normaal bereikbaar en enkel buiten. De stukprijzen blijven bij deze tijdsaanpassing gelijk. Andere tijden blijven startschattingen. De arbeidsnorm, minimumopdracht en voorbereiding blijven behouden. Bij bestaande installaties worden alleen ongewijzigde standaardprijzen en standaardtijden aangepast; eigen afwijkingen en opgeslagen offertes blijven behouden.
 
+## Prijsverhoging van 25 oktober 2026
+
+Tariefversie 5 verhoogt alle standaardstukprijzen met 15%, afgerond op eurocenten. Werktijden, arbeidsnorm (€55/u), minimumopdracht (€40), btw en procentuele toeslagen blijven gelijk. Alleen ongewijzigde standaardprijzen worden bijgewerkt; eigen afwijkende tarieven en opgeslagen offertes blijven behouden. De onderstaande tabellen tonen de nieuwe prijzen.
+
 ## Ramen: één telling, buitenbasis
 
 | Volledig raam, inclusief kader | Stukprijs buiten | Geschatte minuten buiten |
 |---|---:|---:|
-| Klein raam | €3,50 | 1 |
-| Normaal raam | €5,50 | 2 |
-| Groot raam | €7,50 | 3 |
-| Schuifraam | €9,50 | 6 |
-| Dakraam | €10,50 | 6 |
+| Klein raam | €4,03 | 1 |
+| Normaal raam | €6,33 | 2 |
+| Groot raam | €8,63 | 3 |
+| Schuifraam | €10,93 | 6 |
+| Dakraam | €12,08 | 6 |
 
 Kies bij de totalen **Enkel buiten** of **Binnen & buiten (+75%)**. Die keuze geldt voor alle getelde ramen. De 75% wordt afzonderlijk op de buitenbasis van de ramen berekend, niet op rolluiken, poorten, veranda’s, materiaal of verplaatsing. De geschatte raamtijd stijgt eveneens met 75%. De vaste voorbereidingstijd wordt maar één keer toegevoegd.
 
@@ -28,9 +32,9 @@ Een minimumopdracht kan de toeslag bij een heel kleine opdracht absorberen. De a
 
 ## Moeilijkheid per raamsoort
 
-De derde tariefversie verlaagt een groot raam naar €7,50 en een schuifraam naar €9,50 exclusief btw. Onder elke raamsoort kun je het totaal verdelen over normaal, gemiddeld, moeilijk en zeer moeilijk. De standaardtoeslagen zijn respectievelijk 0%, 15%, 30% en 50%, aanpasbaar bij Instellingen. De geschatte tijd stijgt met dezelfde verhouding voor alleen de betrokken ramen; een normaal groot raam duurt maximaal 3 minuten buiten.
+De derde tariefversie verlaagde een groot raam destijds naar €7,50 en een schuifraam naar €9,50 exclusief btw. Onder elke raamsoort kun je het totaal verdelen over normaal, gemiddeld, moeilijk en zeer moeilijk. De standaardtoeslagen zijn respectievelijk 0%, 15%, 30% en 50%, aanpasbaar bij Instellingen. De geschatte tijd stijgt met dezelfde verhouding voor alleen de betrokken ramen; een normaal groot raam duurt maximaal 3 minuten buiten.
 
-Bij 5 normale formaatramen, verdeeld als 3 normaal, 1 gemiddeld en 1 moeilijk, is de buitenbasis 5 × €5,50 = €27,50. De moeilijkheidstoeslag bedraagt €2,48. Bij binnen en buiten geldt +75% ook op deze raamtoeslag. Minimumopdracht en uurgrens kunnen de uiteindelijke prijs verder verhogen.
+Bij 5 normale formaatramen, verdeeld als 3 normaal, 1 gemiddeld en 1 moeilijk, is de buitenbasis 5 × €6,33 = €31,65. De moeilijkheidstoeslag bedraagt €2,85. Bij binnen en buiten geldt +75% ook op deze raamtoeslag. Minimumopdracht en uurgrens kunnen de uiteindelijke prijs verder verhogen.
 
 Nieuwe ramen worden aan normaal toegevoegd. Een gemiddeld, moeilijk of zeer moeilijk aantal invoeren haalt dat aantal uit normaal, zodat het totaal gelijk blijft. Normaal rechtstreeks wijzigen past het totaal aan. Bij verlaging van het totale aantal worden eerst normale ramen verwijderd, daarna gemiddeld, moeilijk en zeer moeilijk. De globale moeilijkheidskeuze geldt voor andere diensten en oudere raamtellingen die nog geen verdeling hebben. Een expliciete raamverdeling vervangt die globale moeilijkheid; er is geen dubbele toeslag. Bereikbaarheid blijft een aparte aanpassing op de volledige opdracht.
 
@@ -40,18 +44,18 @@ Eigen prijzen en moeilijkheidstoeslagen blijven behouden bij de update; de oorsp
 
 | Dienst | Richtprijs per object | Geschatte minuten |
 |---|---:|---:|
-| Klein rolluik | €10,50 | 7 |
-| Standaard rolluik | €17,50 | 11 |
-| Groot rolluik | €26,50 | 18 |
-| Standaard garagepoort | €22 | 15 |
-| Brede garagepoort | €35 | 22 |
-| Grote / dubbele garagepoort | €48 | 32 |
-| Veranda klein | €70 | 55 |
-| Veranda middelgroot | €115 | 90 |
-| Veranda groot | €175 | 135 |
-| Glazen tuinhuis klein | €52,50 | 45 |
-| Glazen tuinhuis middelgroot | €87,50 | 65 |
-| Glazen tuinhuis groot | €140 | 110 |
+| Klein rolluik | €12,08 | 7 |
+| Standaard rolluik | €20,13 | 11 |
+| Groot rolluik | €30,48 | 18 |
+| Standaard garagepoort | €25,30 | 15 |
+| Brede garagepoort | €40,25 | 22 |
+| Grote / dubbele garagepoort | €55,20 | 32 |
+| Veranda klein | €80,50 | 55 |
+| Veranda middelgroot | €132,25 | 90 |
+| Veranda groot | €201,25 | 135 |
+| Glazen tuinhuis klein | €60,38 | 45 |
+| Glazen tuinhuis middelgroot | €100,63 | 65 |
+| Glazen tuinhuis groot | €161,00 | 110 |
 
 Deze objectprijzen veronderstellen normale vervuiling en bereikbaarheid. Bouwresten, uitzonderlijke afmetingen, dieptereiniging, moeilijk bereikbare daken en ander extra werk vragen een aangepaste prijs en tijd. Glas inbegrepen in een veranda of tuinhuis mag niet nog eens als raam worden geteld.
 

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
-import { previousStandardRates, revisionTwoRates, revisionThreeRates } from './standard-rates'
+import { previousStandardRates, revisionTwoRates, revisionThreeRates, revisionFourRates } from './standard-rates'
 import { calculate } from './calculate'
 import { defaultSettings, legacyDefaultSettings, emptyDraft } from './models'
 import { upgradeDraft, upgradeSettings } from './upgrade'
@@ -91,15 +91,15 @@ describe('Nieuwe exclusieve prijsregels', () => {
       expect(restored.draft.windowCleaning).toBe('both'); expect(restored.result.exclusiveCents).toBe(8750)
     } finally { await source.delete(); await target.delete() }
   })
-  it('verlaagt alle standaardprijzen en tijden, met drie minuten voor een groot raam', () => {
+  it('verhoogt alle standaardstukprijzen met 15% zonder de snellere tijden te veranderen', () => {
     const settings = defaultSettings()
-    for (const [id, old] of Object.entries(previousStandardRates)) {
-      expect(settings.rates[id].priceCents).toBeLessThan(old.priceCents)
-      expect(settings.rates[id].minutes).toBeLessThan(old.minutes)
+    for (const [id, old] of Object.entries(revisionFourRates)) {
+      expect(settings.rates[id].priceCents).toBe(Math.round(old.priceCents * 115 / 100))
+      expect(settings.rates[id].minutes).toBe(old.minutes)
     }
-    expect(settings.rates['windows-outside-0']).toEqual({ priceCents: 350, minutes: 1 })
-    expect(settings.rates['windows-outside-1']).toEqual({ priceCents: 550, minutes: 2 })
-    expect(settings.rates['windows-outside-2']).toEqual({ priceCents: 750, minutes: 3 })
+    expect(settings.rates['windows-outside-0']).toEqual({ priceCents: 403, minutes: 1 })
+    expect(settings.rates['windows-outside-1']).toEqual({ priceCents: 633, minutes: 2 })
+    expect(settings.rates['windows-outside-2']).toEqual({ priceCents: 863, minutes: 3 })
     const draft = emptyDraft(); draft.lines.find(l => l.id === 'windows-outside-2')!.quantity = 10
     expect(calculate(draft, settings).totalMinutes).toBe(40)
   })
@@ -113,9 +113,9 @@ describe('Nieuwe exclusieve prijsregels', () => {
       const draft = emptyDraft(); draft.lines[6].quantity = 10
       const quote = await saveQuote(draft, old, null, database)
       const updated = await loadSettings(database)
-      expect(updated.rates['windows-outside-2']).toEqual({ priceCents: 750, minutes: 3 })
+      expect(updated.rates['windows-outside-2']).toEqual({ priceCents: 863, minutes: 3 })
       expect(updated.rates['windows-outside-1']).toEqual({ priceCents: 777, minutes: 2 })
-      expect(updated.rates['garages-0']).toEqual({ priceCents: 2200, minutes: 13 })
+      expect(updated.rates['garages-0']).toEqual({ priceCents: 2530, minutes: 13 })
       expect((await database.quotes.get(quote.id))!.settings.rates['windows-outside-2'].minutes).toBe(8)
       expect((await loadWorkspace(database))!.settings.rates['windows-outside-2'].minutes).toBe(8)
       await saveWorkspace({ draft: emptyDraft(), settings: old, editingId: null }, database)
@@ -143,7 +143,7 @@ describe('Nieuwe exclusieve prijsregels', () => {
     const shutter = draft.lines.find(l => l.id === 'shutters-0')!; shutter.quantity = 1
     const result = calculate(draft, settings)
     expect(result.windowDifficultyCents).toBe(225)
-    expect(result.surchargeCents).toBe(225 + 315 + 355)
+    expect(result.surchargeCents).toBe(225 + 362 + 371)
   })
   it('weigert onjuiste verdelingen en verdelingen bij andere diensten', () => {
     const { draft } = fixture(); draft.lines[6].difficultyCounts = [3, 1, 1, 0]
@@ -157,7 +157,7 @@ describe('Nieuwe exclusieve prijsregels', () => {
     const old = defaultSettings(); old.tariffRevision = 2; old.rates = structuredClone(revisionTwoRates); old.difficultyBps = [0, 0, 0, 0]
     old.rates['windows-outside-3'].priceCents = 999
     const next = upgradeSettings(old)
-    expect(next.rates['windows-outside-2'].priceCents).toBe(750)
+    expect(next.rates['windows-outside-2'].priceCents).toBe(863)
     expect(next.rates['windows-outside-3'].priceCents).toBe(999)
     expect(next.difficultyBps).toEqual([0, 1500, 3000, 5000])
     expect(upgradeSettings(old, false)).toEqual(old)
@@ -191,7 +191,7 @@ describe('Nieuwe exclusieve prijsregels', () => {
     expect(result.exclusiveCents).toBe(7_000_000_000_000)
   })
 
-  it('verkort standaardraamtijden zonder prijzen, eigen tijden of historische offertes te wijzigen', async () => {
+  it('werkt oudere standaardtarieven bij zonder eigen tijden of historische offertes te wijzigen', async () => {
     const database = new JrsDatabase(crypto.randomUUID())
     try {
       const old = defaultSettings(); old.tariffRevision = 3; old.rates = structuredClone(revisionThreeRates)
@@ -204,10 +204,29 @@ describe('Nieuwe exclusieve prijsregels', () => {
       expect(next.rates['windows-outside-0'].minutes).toBe(1)
       expect(next.rates['windows-outside-1'].minutes).toBe(7)
       expect(next.rates['windows-outside-2'].minutes).toBe(3)
-      expect(Object.values(next.rates).map(r => r.priceCents)).toEqual(Object.values(old.rates).map(r => r.priceCents))
+      expect(Object.values(next.rates).map(r => r.priceCents)).toEqual(Object.values(old.rates).map(r => Math.round(r.priceCents! * 115 / 100)))
       expect(next.difficultyBps).toEqual([0, 0, 0, 0])
       expect((await database.quotes.get(quote.id))!.result.totalMinutes).toBe(50)
       expect(calculate(draft, next).totalMinutes).toBe(40)
+    } finally { await database.delete() }
+  })
+
+  it('verhoogt bestaande standaardprijzen maar bewaart eigen tarieven, historische offertes en voorkomt een dubbele verhoging', async () => {
+    const database = new JrsDatabase(crypto.randomUUID())
+    try {
+      const old = defaultSettings(); old.tariffRevision = 4; old.rates = structuredClone(revisionFourRates)
+      old.rates['windows-outside-0'].priceCents = 425
+      const draft = emptyDraft(); draft.lines[6].quantity = 10
+      await saveSettings(old, database)
+      const quote = await saveQuote(draft, old, null, database)
+      const next = await loadSettings(database)
+      expect(next.rates['windows-outside-1'].priceCents).toBe(633)
+      expect(next.rates['windows-outside-0'].priceCents).toBe(425)
+      expect(next.minimumOrderCents).toBe(4000)
+      expect((await database.quotes.get(quote.id))!.result.exclusiveCents).toBe(5500)
+      expect((await loadWorkspace(database))!.settings.rates['windows-outside-1'].priceCents).toBe(550)
+      expect(await loadSettings(database)).toEqual(next)
+      expect(upgradeSettings(next)).toEqual(next)
     } finally { await database.delete() }
   })
 

@@ -1,4 +1,4 @@
-import { previousStandardRates, revisionTwoRates, revisionThreeRates, standardRates } from './standard-rates'
+import { previousStandardRates, revisionTwoRates, revisionThreeRates, revisionFourRates, standardRates } from './standard-rates'
 import { catalog } from './catalog'
 import { defaultSettings, type Settings, type Draft } from './models'
 import { roundRatio } from './money'
@@ -6,14 +6,14 @@ import { roundRatio } from './money'
 export function upgradeSettings(old: Settings, applyNewMinimums = true): Settings {
   if (old.pricingVersion === 2) {
     const next = structuredClone({ ...old, priceBasis: 'exclusive' as const })
-    if (applyNewMinimums && old.tariffRevision !== 4) {
+    if (applyNewMinimums && old.tariffRevision !== 5) {
       for (const item of catalog) {
-        const rate = next.rates[item.id], previous = (old.tariffRevision === 1 ? previousStandardRates : old.tariffRevision === 2 ? revisionTwoRates : revisionThreeRates)[item.id], current = standardRates[item.id]
+        const rate = next.rates[item.id], previous = (old.tariffRevision === 1 ? previousStandardRates : old.tariffRevision === 2 ? revisionTwoRates : old.tariffRevision === 3 ? revisionThreeRates : revisionFourRates)[item.id], current = standardRates[item.id]
         // Migrate each untouched default independently; keep custom prices/times.
         if (rate.priceCents === previous.priceCents) rate.priceCents = current.priceCents
         if (rate.minutes === previous.minutes) rate.minutes = current.minutes
       }
-      next.tariffRevision = 4
+      next.tariffRevision = 5
       if (old.tariffRevision < 3 && old.difficultyBps.every(p => p === 0)) next.difficultyBps = [0, 1500, 3000, 5000]
     }
     return next
@@ -23,7 +23,7 @@ export function upgradeSettings(old: Settings, applyNewMinimums = true): Setting
   const net = (n: number) => roundRatio(n, 10000, 10000 + vat)
   const inputNet = (n: number) => old.priceBasis === 'inclusive' ? net(n) : n
   return {
-    ...structuredClone(old), difficultyBps: applyNewMinimums && old.difficultyBps.every(p => p === 0) ? defaults.difficultyBps : old.difficultyBps, tariffRevision: 4, pricingVersion: 2, priceBasis: 'exclusive',
+    ...structuredClone(old), difficultyBps: applyNewMinimums && old.difficultyBps.every(p => p === 0) ? defaults.difficultyBps : old.difficultyBps, tariffRevision: 5, pricingVersion: 2, priceBasis: 'exclusive',
     rates: Object.fromEntries(catalog.map(item => {
       const rate = old.rates[item.id]
       return [item.id, { priceCents: rate.priceCents === null ? defaults.rates[item.id].priceCents : inputNet(rate.priceCents), minutes: rate.minutes ?? defaults.rates[item.id].minutes }]

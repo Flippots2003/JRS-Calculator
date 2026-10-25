@@ -1,3 +1,5 @@
+import { roundRatio } from './money'
+
 // Reference: https://www.solvari.be/nl/glazenwasser (checked 14 October 2026).
 // The guide publishes €35–€60/hour excluding VAT for detached homes.
 // Unit prices and durations below are JRS starting estimates derived from time
@@ -43,3 +45,7 @@ for (const [i, minutes] of [[0, 1], [1, 2], [2, 3]]) {
   standardRates[`windows-outside-${i}`].minutes = minutes
   standardRates[`windows-both-${i}`].minutes = Math.round(minutes * 175 / 100)
 }
+
+export const revisionFourRates = structuredClone(standardRates)
+// Revision 5: increase every standard unit price by 15%, rounding once to cents.
+for (const rate of Object.values(standardRates)) rate.priceCents = roundRatio(rate.priceCents, 115, 100)
